@@ -1,0 +1,15 @@
+version: "2.4"
+services:
+  lsp:
+    build:
+      context: ../../
+      dockerfile: ./compose/lsp/Dockerfile
+    container_name: "typedflow_lsp_hirota"
+    volumes:
+      - "${HOME}/typedflow:${HOME}/typedflow"
+      - "${HOME}/typedflow/typedflow:/opt/conda/lib/python3.7/site-packages/typedflow:ro"
+    ports:
+      - 11001:11001
+    working_dir: ${HOME}/typedflow
+    command: pyls --port 11001
+    stdin_open: true
