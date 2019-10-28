@@ -1,6 +1,8 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import ClassVar, Generic, List, TypeVar
+import json
+from pathlib import Path
+from typing import ClassVar, Dict, List, TypeVar
 
 from dataclasses_json import dataclass_json
 
@@ -18,20 +20,24 @@ class Flow:
     def append_job(self,
                    job: Job) -> Flow:
         if len(self.jobs) > 0:
-            tail: jobs = jobs[-1]
-            assert jobs
+            tail: Job = self.jobs[-1]
+            assert tail.out_class == job.in_class
         else:
-            assert jobs.__args__[0] == InitialMessage
+            assert isinstance(job, InitialMessage)
 
 
 @dataclass_json
 @dataclass
 class Message:
-    workflow: WorkFlow
 
     def dump(self,
-             input_file: Path) -> Path:
-        logpath = self.workflow.get_logpath()
+             path: Path,
+             check_existence: bool = True) -> None:
+        if check_existence and path.exists():
+            raise AssertionError(f'{path} already exists')
+        data: Dict = self.to_dict()
+        with open(path, 'w') as fout:
+            json.dump(data, fout)
 
 
 class InitialMessage(Message):
@@ -51,10 +57,12 @@ class Job:
     """
     A job which receives an instance of T
     and sends an instace of K
+    in_class and out_class should be overwritten when declaring
+    the class
     """
-    workflow: WorkFlow
-    in_class: ClassVar[T]
-    out_class: ClassVar[K]
+    flow: Flow
+    in_class: ClassVar[T] = Message
+    out_class: ClassVar[K] = Message
 
     def process(self,
                 message: Job.in_class) -> Job.out_class:
