@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Generic, List, TypeVar
+from typing import ClassVar, Generic, List, TypeVar
 
 from dataclasses_json import dataclass_json
 
@@ -8,12 +8,20 @@ from typedflow.settings import logdir
 
 
 @dataclass
-class WorkFlow:
+class Flow:
     id: int
     jobs: List[Job]
 
     def get_logpath(self):
-        logdir.joinpath(f'{str(self.id)}')
+        return logdir.joinpath(f'{str(self.id)}')
+
+    def append_job(self,
+                   job: Job) -> Flow:
+        if len(self.jobs) > 0:
+            tail: jobs = jobs[-1]
+            assert jobs
+        else:
+            assert jobs.__args__[0] == InitialMessage
 
 
 @dataclass_json
@@ -21,8 +29,10 @@ class WorkFlow:
 class Message:
     workflow: WorkFlow
 
-    def dump(self) -> Path:
+    def dump(self,
+             input_file: Path) -> Path:
         logpath = self.workflow.get_logpath()
+
 
 class InitialMessage(Message):
     """
@@ -34,17 +44,18 @@ class InitialMessage(Message):
 
 T = TypeVar('T', bound=Message)
 K = TypeVar('K', bound=Message)
-V = TypeVar('V', bound=Message)
 
 
 @dataclass
-class Job(Generic[T, K]):
+class Job:
     """
     A job which receives an instance of T
     and sends an instace of K
     """
     workflow: WorkFlow
+    in_class: ClassVar[T]
+    out_class: ClassVar[K]
 
     def process(self,
-                message: T) -> K:
+                message: Job.in_class) -> Job.out_class:
         raise NotImplementedError('Implemented not yet')
