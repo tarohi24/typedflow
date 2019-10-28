@@ -3,10 +3,15 @@ from typing import Generic, TypeVar
 
 from dataclasses_json import dataclass_json
 
+from typedflow.settings import logdir
+
 
 @dataclass
 class WorkFlow:
     id: int
+
+    def get_logpath(self):
+        logdir.joinpath(f'{str(self.id)}')
 
 
 @dataclass_json
