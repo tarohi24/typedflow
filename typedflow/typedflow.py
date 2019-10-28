@@ -21,12 +21,14 @@ class WorkFlow:
 class Message:
     workflow: WorkFlow
 
+    def dump(self) -> Path:
+        logpath = self.workflow.get_logpath()
 
 class InitialMessage(Message):
     """
     Every workflow starts with a job that receive this instance
     """
-    def initialize(self) -> Message:
+    def load(self) -> Message:
         raise NotImplementedError('Implemented not yet')
 
 
@@ -42,13 +44,7 @@ class Job(Generic[T, K]):
     and sends an instace of K
     """
     workflow: WorkFlow
-    predecessors: List[Job]
 
     def process(self,
                 message: T) -> K:
         raise NotImplementedError('Implemented not yet')
-
-    def append_job(self,
-                   job: Job[K, V]) -> Job[T, K]:
-        self.predecessors.append(job)
-        return self
