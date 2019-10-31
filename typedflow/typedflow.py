@@ -46,20 +46,29 @@ class DataLoarder(Generic[K]):
 
 
 @dataclass
+class Dumper(Generic[T]):
+    in_type: Type = T
+    func: Callable[Batch[T], None]  # dumping function
+
+    def dump(self, batch: Batch[T]) -> None:
+        self.func(batch)
+
+
+@dataclass
 class Pipeline:
     loader: DataLoarder
     pipeline: List[Task]
+    dumper: Dumper
 
     def validate(self) -> None:
-        if len(self.pipeline) == 0:
-            return
-        assert self.loader.out_type == self.pipeline[0]
+        assert len(self.pipeline) > 0, 'No tasks are in the pipeline'
+        assert self.loader.out_type == self.pipeline[0].in_type
         for prev, nxt in zip(self.pipeline, self.pipeline[1:]):
             assert prev.out_type == nxt.in_type
-        return
+        assert self.pipeline[-1].out_type == self.dumper.in_type
 
     def run(self,
-            validate: bool = True) -> Generator[Batch, None, None]:
+            validate: bool = True) -> None:
         """
         Return
         -----
@@ -75,4 +84,4 @@ class Pipeline:
         if validate:
             self.validate()
         for batch in self.loader.load:
-            yield _run(batch, self.pipeline)
+            self.dumper.dump(batch)
