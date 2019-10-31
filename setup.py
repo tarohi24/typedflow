@@ -23,11 +23,6 @@ setup(
         'Programming Language :: Python :: 3.8',
     ],
     description='A type-aware workflow engine working on Python',
-    entry_points={
-        'console_scripts': [
-            'typedflow=typedflow.cli:main',
-        ],
-    },
     install_requires=requirements,
     license="MIT license",
     include_package_data=True,

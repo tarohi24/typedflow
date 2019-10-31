@@ -1,69 +1,67 @@
 from __future__ import annotations
 from dataclasses import dataclass
-import json
-from pathlib import Path
-from typing import ClassVar, Dict, List, TypeVar
+from typing import Generic, Generator, List, Type, TypeVar
 
 from dataclasses_json import dataclass_json
 
-from typedflow.settings import logdir
 
-
-@dataclass
-class Flow:
-    id: int
-    jobs: List[Job]
-
-    def get_logpath(self):
-        return logdir.joinpath(f'{str(self.id)}')
-
-    def append_job(self,
-                   job: Job) -> Flow:
-        if len(self.jobs) > 0:
-            tail: Job = self.jobs[-1]
-            assert tail.out_class == job.in_class
-        else:
-            assert isinstance(job, InitialMessage)
+T = TypeVar('T')
+K = TypeVar('K')
 
 
 @dataclass_json
 @dataclass
-class Message:
-
-    def dump(self,
-             path: Path,
-             check_existence: bool = True) -> None:
-        if check_existence and path.exists():
-            raise AssertionError(f'{path} already exists')
-        data: Dict = self.to_dict()
-        with open(path, 'w') as fout:
-            json.dump(data, fout)
-
-
-class InitialMessage(Message):
-    """
-    Every workflow starts with a job that receive this instance
-    """
-    def load(self) -> Message:
-        raise NotImplementedError('Implemented not yet')
-
-
-T = TypeVar('T', bound=Message)
-K = TypeVar('K', bound=Message)
+class Batch(Generic[T]):
+    finished: bool = False
+    data: List[T]
 
 
 @dataclass
-class Job:
-    """
-    A job which receives an instance of T
-    and sends an instace of K
-    in_class and out_class should be overwritten when declaring
-    the class
-    """
-    flow: Flow
-    in_class: ClassVar[T] = Message
-    out_class: ClassVar[K] = Message
+class Task(Generic[T, K]):
+    in_type: Type = T
+    out_type: Type = K
 
     def process(self,
-                message: Job.in_class) -> Job.out_class:
-        raise NotImplementedError('Implemented not yet')
+                batch: Batch[T]) -> Batch[K]:
+        raise NotImplementedError()
+
+
+@dataclass
+class DataLoarder(Generic[K]):
+    out_type: Type = K
+
+    def load(self) -> Generator[Batch[K], None, None]:
+        raise NotImplementedError()
+
+
+@dataclass
+class Pipeline:
+    loader: DataLoarder
+    pipeline: List[Task]
+
+    def validate(self) -> None:
+        if len(self.pipeline) == 0:
+            return
+        assert self.loader.out_type == self.pipeline[0]
+        for prev, nxt in zip(self.pipeline, self.pipeline[1:]):
+            assert prev.out_type == nxt.in_type
+        return
+
+    def run(self,
+            validate: bool = True) -> int:
+        """
+        Return
+        -----
+        exit code
+        """
+        def _run(batch: Batch, tasks: List[Task]) -> Batch:
+            if len(tasks) == 0:
+                return batch
+            else:
+                head, *tail = tasks
+                return _run(head(batch), tail)
+
+        if validate:
+            self.validate()
+        for batch in self.loader.load:
+            yield _run(batch, self.pipeline)
