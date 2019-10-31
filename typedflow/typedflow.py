@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Generic, Generator, List, Type, TypeVar
+from typing import Callable, Generic, Generator, List, Type, TypeVar
 
 from dataclasses_json import dataclass_json
 
@@ -12,7 +12,6 @@ K = TypeVar('K')
 @dataclass_json
 @dataclass
 class Batch(Generic[T]):
-    finished: bool = False
     data: List[T]
 
 
@@ -20,18 +19,30 @@ class Batch(Generic[T]):
 class Task(Generic[T, K]):
     in_type: Type = T
     out_type: Type = K
+    func: Callable[[T], K]
 
     def process(self,
                 batch: Batch[T]) -> Batch[K]:
-        raise NotImplementedError()
+        lst: List[K] = [self.func(item) for item in batch.data]
+        return Batch(data=lst)
 
 
 @dataclass
 class DataLoarder(Generic[K]):
     out_type: Type = K
+    gen: Generator[K, None, None]
+    batch_size: int = 16
 
     def load(self) -> Generator[Batch[K], None, None]:
-        raise NotImplementedError()
+        lst: List[K] = []
+        while True:
+            for _ in range(self.batch_size):
+                try:
+                    item: K = next(self.gen)
+                except StopIteration:
+                    return lst
+                lst.append(item)
+            yield lst
 
 
 @dataclass
