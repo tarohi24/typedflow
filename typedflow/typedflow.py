@@ -59,7 +59,7 @@ class Pipeline:
         return
 
     def run(self,
-            validate: bool = True) -> int:
+            validate: bool = True) -> Generator[Batch, None, None]:
         """
         Return
         -----
