@@ -21,9 +21,14 @@ class Batch(Generic[T]):
     data: List[T]
 
 
+def do_nothing(e: Exception) -> None:
+    return
+
+
 @dataclass
 class Task(Generic[T, K]):
     func: Callable[[T], K]
+    exception_handler: Callable[[Exception], None] = do_nothing
 
     def process(self,
                 batch: Batch[T]) -> Batch[K]:
