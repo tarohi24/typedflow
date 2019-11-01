@@ -15,9 +15,9 @@ class Batch(Generic[T]):
 
 @dataclass
 class Task(Generic[T, K]):
+    func: Callable[[T], K]
     in_type: Type = T
     out_type: Type = K
-    func: Callable[[T], K]
 
     def process(self,
                 batch: Batch[T]) -> Batch[K]:
@@ -27,8 +27,8 @@ class Task(Generic[T, K]):
 
 @dataclass
 class DataLoarder(Generic[K]):
-    out_type: Type = K
     gen: Generator[K, None, None]
+    out_type: Type = K
     batch_size: int = 16
 
     def load(self) -> Generator[Batch[K], None, None]:
@@ -47,8 +47,8 @@ class DataLoarder(Generic[K]):
 
 @dataclass
 class Dumper(Generic[T]):
-    in_type: Type = T
     func: Callable[Batch[T], None]  # dumping function
+    in_type: Type = T
 
     def dump(self, batch: Batch[T]) -> None:
         self.func(batch)
