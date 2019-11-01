@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
+import logging
 from typing import (
     Callable,
     Generic,
@@ -9,6 +10,9 @@ from typing import (
     List,
     TypeVar
 )
+
+
+logger = logging.getLogger(__file__)
 
 
 T = TypeVar('T')  # serializable
@@ -21,14 +25,9 @@ class Batch(Generic[T]):
     data: List[T]
 
 
-def do_nothing(e: Exception) -> None:
-    return
-
-
 @dataclass
 class Task(Generic[T, K]):
     func: Callable[[T], K]
-    exception_handler: Callable[[Exception], None] = do_nothing
 
     def process(self,
                 batch: Batch[T]) -> Batch[K]:
@@ -87,10 +86,15 @@ class Pipeline:
                 return batch
             else:
                 head, *tail = tasks
-                return _run(head.process(batch), tail)
+                next_batch: Batch = head.process(batch)
+                return _run(next_batch, tail)
 
         if validate:
             self.validate()
         for batch in self.loader.load():
-            product: Batch = _run(batch, self.pipeline)
+            try:
+                product: Batch = _run(batch, self.pipeline)
+            except Exception as e:
+                logger.warn(e)
+                continue
             self.dumper.dump(product)
