@@ -26,7 +26,7 @@ class Task(Generic[T, K]):
 
 
 @dataclass
-class DataLoarder(Generic[K]):
+class DataLoader(Generic[K]):
     gen: Generator[K, None, None]
     out_type: Type = K
     batch_size: int = 16
