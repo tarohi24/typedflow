@@ -1,6 +1,14 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import Callable, Generic, Generator, Iterable, Iterator, List, Type, TypeVar
+from dataclasses import dataclass
+from typing import (
+    Callable,
+    Generic,
+    Generator,
+    Iterable,
+    Iterator,
+    List,
+    TypeVar
+)
 
 
 T = TypeVar('T')  # serializable
