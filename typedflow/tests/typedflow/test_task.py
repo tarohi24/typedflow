@@ -16,7 +16,7 @@ class TaskTest(unittest.TestCase):
         loader: DataLoader[str] = DataLoader(gen=data)
         count_word: Task[str, int] = Task[str, int](lambda s: len(s))
         convert_to_str: Task[int, str] = Task[int, str](lambda x: str(x))
-        dumper: Dumper[str] = Dumper[str](print)
+        dumper: Dumper[str] = Dumper[str](lambda b: print(b.data))
         self.pipeline: Pipeline = Pipeline(
             loader, [count_word, convert_to_str, ], dumper)
 

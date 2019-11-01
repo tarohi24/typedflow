@@ -37,3 +37,8 @@ def dump_to_one_file(batch: Batch[T],
     with open(path, 'a') as fout:
         for js in data:
             fout.write(js + '\n')
+
+
+def dump_print(batch: Batch[T]) -> None:
+    for item in batch.date:
+        print(item)
