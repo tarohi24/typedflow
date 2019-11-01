@@ -1,6 +1,6 @@
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import Callable, Generic, Generator, List, Type, TypeVar
+from dataclasses import dataclass, field
+from typing import Callable, Generic, Generator, Iterable, Iterator, List, Type, TypeVar
 
 
 T = TypeVar('T')  # serializable
@@ -16,8 +16,6 @@ class Batch(Generic[T]):
 @dataclass
 class Task(Generic[T, K]):
     func: Callable[[T], K]
-    in_type: Type = T
-    out_type: Type = K
 
     def process(self,
                 batch: Batch[T]) -> Batch[K]:
@@ -28,16 +26,16 @@ class Task(Generic[T, K]):
 @dataclass
 class DataLoader(Generic[K]):
     gen: Iterable[K, None, None]
-    out_type: Type = K
     batch_size: int = 16
 
     def load(self) -> Generator[Batch[K], None, None]:
         lst: List[K] = []
         batch_id: int = 0
+        itr: Iterator[K] = iter(self.gen)
         while True:
             for _ in range(self.batch_size):
                 try:
-                    item: K = next(self.gen)
+                    item: K = next(itr)
                 except StopIteration:
                     return lst
                 lst.append(item)
@@ -48,7 +46,6 @@ class DataLoader(Generic[K]):
 @dataclass
 class Dumper(Generic[T]):
     func: Callable[Batch[T], None]  # dumping function
-    in_type: Type = T
 
     def dump(self, batch: Batch[T]) -> None:
         self.func(batch)
@@ -61,11 +58,11 @@ class Pipeline:
     dumper: Dumper
 
     def validate(self) -> None:
-        assert len(self.pipeline) > 0, 'No tasks are in the pipeline'
-        assert self.loader.out_type == self.pipeline[0].in_type
-        for prev, nxt in zip(self.pipeline, self.pipeline[1:]):
-            assert prev.out_type == nxt.in_type
-        assert self.pipeline[-1].out_type == self.dumper.in_type
+        """
+        not implemented because Python Generic doesn't offer
+        any ways to access to the actual type
+        """
+        pass
 
     def run(self,
             validate: bool = True) -> None:
@@ -78,5 +75,5 @@ class Pipeline:
 
         if validate:
             self.validate()
-        for batch in self.loader.load:
+        for batch in self.loader.load():
             self.dumper.dump(batch)
