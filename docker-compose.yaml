@@ -4,3 +4,7 @@ services:
     build:
       context: ./
       dockerfile: ./Dockerfile
+    working_dir: /workplace
+    volumes:
+      - "${HOME}/typedflow:/workplace"
+      - "${HOME}/typedflow/typedflow:/opt/conda/lib/python3.7/site-packages/typedflow:ro"
