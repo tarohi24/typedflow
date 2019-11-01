@@ -5,8 +5,8 @@ from typing import Callable, Generic, Generator, List, Type, TypeVar
 from dataclasses_json import dataclass_json
 
 
-T = TypeVar('T')
-K = TypeVar('K')
+T = TypeVar('T')  # serializable
+K = TypeVar('K')  # serializable
 
 
 @dataclass_json
