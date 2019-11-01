@@ -69,11 +69,6 @@ class Pipeline:
 
     def run(self,
             validate: bool = True) -> None:
-        """
-        Return
-        -----
-        exit code
-        """
         def _run(batch: Batch, tasks: List[Task]) -> Batch:
             if len(tasks) == 0:
                 return batch
