@@ -1,6 +1,18 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import Callable, Generic, Generator, Iterable, Iterator, List, Type, TypeVar
+from dataclasses import dataclass
+import logging
+from typing import (
+    Callable,
+    Generic,
+    Generator,
+    Iterable,
+    Iterator,
+    List,
+    TypeVar
+)
+
+
+logger = logging.getLogger(__file__)
 
 
 T = TypeVar('T')  # serializable
@@ -74,10 +86,15 @@ class Pipeline:
                 return batch
             else:
                 head, *tail = tasks
-                return _run(head.process(batch), tail)
+                next_batch: Batch = head.process(batch)
+                return _run(next_batch, tail)
 
         if validate:
             self.validate()
         for batch in self.loader.load():
-            product: Batch = _run(batch, self.pipeline)
+            try:
+                product: Batch = _run(batch, self.pipeline)
+            except Exception as e:
+                logger.warn(e)
+                continue
             self.dumper.dump(product)
