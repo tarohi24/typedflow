@@ -27,7 +27,7 @@ class Task(Generic[T, K]):
 
 @dataclass
 class DataLoader(Generic[K]):
-    gen: Generator[K, None, None]
+    gen: Iterable[K, None, None]
     out_type: Type = K
     batch_size: int = 16
 
@@ -56,7 +56,7 @@ class Dumper(Generic[T]):
 
 @dataclass
 class Pipeline:
-    loader: DataLoarder
+    loader: DataLoader
     pipeline: List[Task]
     dumper: Dumper
 
