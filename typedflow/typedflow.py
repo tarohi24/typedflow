@@ -12,6 +12,7 @@ K = TypeVar('K')
 @dataclass_json
 @dataclass
 class Batch(Generic[T]):
+    batch_id: int
     data: List[T]
 
 
@@ -35,6 +36,7 @@ class DataLoarder(Generic[K]):
 
     def load(self) -> Generator[Batch[K], None, None]:
         lst: List[K] = []
+        batch_id: int = 0
         while True:
             for _ in range(self.batch_size):
                 try:
@@ -42,7 +44,8 @@ class DataLoarder(Generic[K]):
                 except StopIteration:
                     return lst
                 lst.append(item)
-            yield lst
+            batch: Batch[K] = Batch[K](batch_id=batch_id, data=lst)
+            yield batch
 
 
 @dataclass
