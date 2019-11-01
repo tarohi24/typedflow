@@ -2,14 +2,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Generic, Generator, List, Type, TypeVar
 
-from dataclasses_json import dataclass_json
-
 
 T = TypeVar('T')  # serializable
 K = TypeVar('K')  # serializable
 
 
-@dataclass_json
 @dataclass
 class Batch(Generic[T]):
     batch_id: int
