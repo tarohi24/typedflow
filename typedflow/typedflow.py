@@ -20,7 +20,7 @@ class Task(Generic[T, K]):
     def process(self,
                 batch: Batch[T]) -> Batch[K]:
         lst: List[K] = [self.func(item) for item in batch.data]
-        return Batch(data=lst)
+        return Batch(batch_id=batch.batch_id, data=lst)
 
 
 @dataclass
@@ -37,7 +37,9 @@ class DataLoader(Generic[K]):
                 try:
                     item: K = next(itr)
                 except StopIteration:
-                    return lst
+                    batch: Batch[K] = Batch[K](batch_id=batch_id, data=lst)
+                    yield batch
+                    return
                 lst.append(item)
             batch: Batch[K] = Batch[K](batch_id=batch_id, data=lst)
             yield batch
@@ -66,14 +68,16 @@ class Pipeline:
 
     def run(self,
             validate: bool = True) -> None:
+
         def _run(batch: Batch, tasks: List[Task]) -> Batch:
             if len(tasks) == 0:
                 return batch
             else:
                 head, *tail = tasks
-                return _run(head(batch), tail)
+                return _run(head.process(batch), tail)
 
         if validate:
             self.validate()
         for batch in self.loader.load():
-            self.dumper.dump(batch)
+            product: Batch = _run(batch, self.pipeline)
+            self.dumper.dump(product)

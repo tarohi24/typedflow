@@ -10,7 +10,7 @@ from typedflow.utils import dump_to_one_file
 
 class TestDump(unittest.TestCase):
     def setUp(self):
-        self.test_dir: Path = tempfile.mkdtemp()
+        self.test_dir: Path = Path(tempfile.mkdtemp())
 
     def tearDown(self):
         shutil.rmtree(self.test_dir)

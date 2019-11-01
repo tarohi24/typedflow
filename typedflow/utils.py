@@ -40,5 +40,5 @@ def dump_to_one_file(batch: Batch[T],
 
 
 def dump_print(batch: Batch[T]) -> None:
-    for item in batch.date:
+    for item in batch.data:
         print(item)
