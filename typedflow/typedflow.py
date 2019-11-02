@@ -19,6 +19,10 @@ T = TypeVar('T')  # serializable
 K = TypeVar('K')  # serializable
 
 
+class BatchIsEmpty(Exception):
+    pass
+
+
 @dataclass
 class Batch(Generic[T]):
     batch_id: int
@@ -31,8 +35,18 @@ class Task(Generic[T, K]):
 
     def process(self,
                 batch: Batch[T]) -> Batch[K]:
-        lst: List[K] = [self.func(item) for item in batch.data]
-        return Batch(batch_id=batch.batch_id, data=lst)
+        products: List[K] = []
+        for item in batch.data:
+            try:
+                products.append(self.func(item))
+            except Exception as e:
+                logger.warn(repr(e))
+                continue
+        if len(products) > 0:
+            return Batch[K](batch_id=batch.batch_id,
+                            data=products)
+        else:
+            raise BatchIsEmpty()
 
 
 @dataclass
@@ -97,7 +111,6 @@ class Pipeline:
         for batch in self.loader.load():
             try:
                 product: Batch = _run(batch, self.pipeline)
-            except Exception as e:
-                logger.warn(repr(e))
+            except BatchIsEmpty:
                 continue
             self.dumper.dump(product)

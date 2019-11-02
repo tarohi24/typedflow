@@ -77,7 +77,7 @@ def test_process(pl, capsys):
 def test_except_batch(invalid_pl, capsys):
     invalid_pl.run()
     out, _ = capsys.readouterr()
-    assert out == ''
+    assert out == '15\n12\n'
 
 
 def test_multibatch_process(mutlibatch_pl, capsys):
