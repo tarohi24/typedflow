@@ -95,6 +95,6 @@ class Pipeline:
             try:
                 product: Batch = _run(batch, self.pipeline)
             except Exception as e:
-                logger.warn(e)
+                logger.warn(repr(e))
                 continue
             self.dumper.dump(product)
