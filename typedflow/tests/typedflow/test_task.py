@@ -3,7 +3,7 @@ from typing import List
 import pytest
 
 from typedflow.typedflow import (
-    Task, Pipeline, DataLoader, Dumper
+    Task, Pipeline, DataLoader, Dumper, Batch
 )
 from typedflow.utils import dump_print
 
@@ -15,6 +15,16 @@ def loader() -> DataLoader[str]:
         'Here we are.',
     ]
     loader: DataLoader[str] = DataLoader(gen=data)
+    return loader
+
+
+@pytest.fixture
+def multibatch_loader() -> DataLoader[str]:
+    data: List[str] = [
+        'This is a test.',
+        'Here we are.',
+    ]
+    loader: DataLoader[str] = DataLoader(gen=data, batch_size=1)
     return loader
 
 
@@ -35,6 +45,13 @@ def dumper() -> Dumper[str]:
 def pl(loader, count_char_tasks, dumper):
     pipeline: Pipeline = Pipeline(
         loader, count_char_tasks, dumper)
+    return pipeline
+
+
+@pytest.fixture
+def mutlibatch_pl(multibatch_loader, count_char_tasks, dumper):
+    pipeline: Pipeline = Pipeline(
+        multibatch_loader, count_char_tasks, dumper)
     return pipeline
 
 
@@ -61,3 +78,16 @@ def test_except_batch(invalid_pl, capsys):
     invalid_pl.run()
     out, _ = capsys.readouterr()
     assert out == ''
+
+
+def test_multibatch_process(mutlibatch_pl, capsys):
+    mutlibatch_pl.run()
+    out, _ = capsys.readouterr()
+    assert out == '15\n12\n'
+
+
+def test_multibatch_ids(multibatch_loader):
+    loads: List[Batch] = list(multibatch_loader.load())
+    assert len(loads) == 2
+    for i, batch in enumerate(loads):
+        assert batch.batch_id == i

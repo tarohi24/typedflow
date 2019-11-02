@@ -50,11 +50,13 @@ class DataLoader(Generic[K]):
                     item: K = next(itr)
                 except StopIteration:
                     batch: Batch[K] = Batch[K](batch_id=batch_id, data=lst)
-                    yield batch
+                    if len(batch.data) > 0:
+                        yield batch
                     return
                 lst.append(item)
             batch: Batch[K] = Batch[K](batch_id=batch_id, data=lst)
             yield batch
+            batch_id += 1
             lst: List[K] = []  # noqa
 
 
