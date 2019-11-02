@@ -55,6 +55,7 @@ class DataLoader(Generic[K]):
                 lst.append(item)
             batch: Batch[K] = Batch[K](batch_id=batch_id, data=lst)
             yield batch
+            lst: List[K] = []  # noqa
 
 
 @dataclass
