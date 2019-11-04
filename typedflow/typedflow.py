@@ -8,6 +8,7 @@ from typing import (
     Iterable,
     Iterator,
     List,
+    Union,
     TypeVar
 )
 
@@ -23,10 +24,14 @@ class BatchIsEmpty(Exception):
     pass
 
 
+class FaultItem:
+    pass
+
+
 @dataclass
 class Batch(Generic[T]):
     batch_id: int
-    data: List[T]
+    data: List[Union[T, FaultItem]]
 
 
 @dataclass
@@ -37,10 +42,13 @@ class Task(Generic[T, K]):
                 batch: Batch[T]) -> Batch[K]:
         products: List[K] = []
         for item in batch.data:
+            if isinstance(item, FaultItem):
+                continue
             try:
                 products.append(self.func(item))
             except Exception as e:
                 logger.warn(repr(e))
+                products.append(FaultItem())
                 continue
         if len(products) > 0:
             return Batch[K](batch_id=batch.batch_id,
