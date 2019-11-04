@@ -4,7 +4,7 @@ Utilities class
 from pathlib import Path
 from typing import Callable, List
 
-from typedflow.typedflow import Batch, T
+from typedflow.typedflow import Batch, FaultItem, T
 
 
 def dump_to_each_file(batch: Batch[T],
@@ -21,7 +21,8 @@ def dump_to_each_file(batch: Batch[T],
         where the batch is saved.
     """
     path: Path = path_method(batch.batch_id)
-    data: List[str] = [item.to_json() for item in batch.data]
+    data: List[str] = [item.to_json() for item in batch.data
+                       if not isinstance(item, FaultItem)]
     with open(path, 'w') as fout:
         for js in data:
             fout.write(js + '\n')
@@ -33,7 +34,8 @@ def dump_to_one_file(batch: Batch[T],
     Dump the batch in a file. Unlike `dump_to_each_file`,
     this dumps all the batch in the identical file
     """
-    data: List[str] = [item.to_json() for item in batch.data]
+    data: List[str] = [item.to_json() for item in batch.data
+                       if not isinstance(item, FaultItem)]
     with open(path, 'a') as fout:
         for js in data:
             fout.write(js + '\n')
@@ -41,4 +43,5 @@ def dump_to_one_file(batch: Batch[T],
 
 def dump_print(batch: Batch[T]) -> None:
     for item in batch.data:
-        print(item)
+        if not isinstance(item, FaultItem):
+            print(item)
