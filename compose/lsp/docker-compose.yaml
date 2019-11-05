@@ -3,11 +3,11 @@ services:
   lsp:
     build:
       context: ../../
-      dockerfile: ./compose/lsp/Dockerfile
+      dockerfile: ./Dockerfile
     container_name: "typedflow_lsp_hirota"
     volumes:
       - "${HOME}/typedflow:${HOME}/typedflow"
-      - "${HOME}/typedflow/typedflow:/opt/conda/lib/python3.7/site-packages/typedflow:ro"
+      - "${HOME}/typedflow/typedflow:/usr/local/lib/python3.8/site-packages/typedflow:ro"
     ports:
       - 11001:11001
     working_dir: ${HOME}/typedflow
