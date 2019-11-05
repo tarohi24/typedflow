@@ -6,3 +6,5 @@ RUN apt-get update && \
 WORKDIR /workplace
 ADD requirements.txt /workplace/
 RUN pip install -r requirements.txt
+ADD requirements_dev.txt /workplace/
+RUN pip install -r requirements_dev.txt
