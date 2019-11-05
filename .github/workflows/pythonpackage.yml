@@ -1,6 +1,7 @@
 name: Python package
 
 on:
+  pull_request:
   push:
     branches: [develop, master]
 
