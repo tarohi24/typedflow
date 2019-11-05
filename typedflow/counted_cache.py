@@ -2,7 +2,7 @@
 cache that disappears after n times reading
 """
 from dataclasses import dataclass, field
-from typing import Dict, Generic, Hashable, TypeVar
+from typing import Dict, Generic
 
 from typedflow.types import T, H
 
