@@ -3,14 +3,14 @@ name: Python package
 on:
   pull_request:
   push:
-    branches: [develop, master]
+    branches: [develop]
 
 jobs:
   build:
 
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 1
+      max-parallel: 4
       matrix:
         python-version: [3.7, 3.8]
 
@@ -26,7 +26,7 @@ jobs:
         pip install -r requirements.txt
         pip install -r requirements_dev.txt
     - name: Install self
-      run: pip install .
+      run: pip install --editable .
     - name: Lint with flake8
       run: make lint
       continue-on-error: true
