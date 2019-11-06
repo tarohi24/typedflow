@@ -1,6 +1,8 @@
+from typing import List
+
 import pytest
 
-from typedflow.nodes import ProviderNode, LoaderNode
+from typedflow.nodes import LoaderNode
 from typedflow.tasks import DataLoader
 
 
