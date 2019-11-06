@@ -136,9 +136,21 @@ class LoaderNode(ProviderNode[K]):
             return self.cache_table.get(batch_id)
 
 
-@dataclass
 class TaskNode(ProviderNode[K], ConsumerNode[T]):
+    """
+    This is not a dataclass because it dataclass doesn't work
+    if it is inherited from multiple super classes
+    """
     task: Task[T, K]
+
+    def __init__(self,
+                 task: Task[T, K],
+                 arg_type: Type[T]):
+        self.task: Task[T, K] = task
+        ConsumerNode.__init__(self, arg_type)
+        ConsumerNode.__post_init__(self)
+        ProviderNode.__init__(self)
+        ProviderNode.__post_init__(self)
 
     async def get_or_produce_batch(self,
                                    batch_id: int) -> Batch[K]:
