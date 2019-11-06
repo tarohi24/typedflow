@@ -27,8 +27,7 @@ jobs:
         pip install -r requirements_dev.txt
     - name: Install self
       run: pip install --editable .
-    - name: Lint with flake8
-      run: make lint
-      continue-on-error: true
     - name: Test with pytest
       run: make test
+    - name: Lint with flake8
+      run: make lint
