@@ -13,6 +13,7 @@ def loader_node() -> LoaderNode[str]:
     node: LoaderNode[str] = LoaderNode(loader=loader)
     return node
 
+
 def test_get_or_produce_batch(loader_node):
     node = loader_node
     node.add_succ()
