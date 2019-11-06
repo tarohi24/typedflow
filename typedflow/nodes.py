@@ -77,8 +77,7 @@ class ConsumerNode(Generic[T]):
 
     @staticmethod
     def _get_batch_len(batches: List[Batch]) -> int:
-        batch_len: int = len(batches[0].data)
-        assert all([len(batch.data) == batch_len for batch in batches])
+        batch_len: int = min([len(batch.data) for batch in batches])
         return batch_len
 
     def _merge_batches(self,
@@ -131,7 +130,7 @@ class LoaderNode(ProviderNode[K]):
             try:
                 batch: Batch[K] = next(self.itr)
             except StopIteration:
-                return EndOfBatch()
+                raise EndOfBatch()
             self.cache_table.set(key=batch_id, value=batch)
             return self.cache_table.get(batch_id)
 
@@ -171,8 +170,7 @@ class DumpNode(ConsumerNode[T]):
                            batch_id: int) -> None:
         if not self.finished:
             try:
-                batch: Batch = await self.prec.get_or_produce_batch(
-                    batch_id=batch_id)
+                batch: Batch[T] = await self.accept(batch_id=batch_id)
                 self.dumper.dump(batch)
             except EndOfBatch:
                 self.finished: bool = True

@@ -4,7 +4,7 @@ from typing import (
     Callable, Generic, Generator, Iterable, Iterator, List)
 
 from typedflow.batch import Batch
-from typedflow.exceptions import BatchIsEmpty, FaultItem
+from typedflow.exceptions import EndOfBatch, FaultItem
 from typedflow.types import T, K
 
 
@@ -18,6 +18,8 @@ class Task(Generic[T, K]):
 
     def process(self,
                 batch: Batch[T]) -> Batch[K]:
+        if len(batch.data) == 0:
+            raise EndOfBatch()
         products: List[K] = []
         for item in batch.data:
             if isinstance(item, FaultItem):
@@ -27,12 +29,8 @@ class Task(Generic[T, K]):
             except Exception as e:
                 logger.warn(repr(e))
                 products.append(FaultItem())
-                continue
-        if len(products) > 0:
-            return Batch[K](batch_id=batch.batch_id,
-                            data=products)
-        else:
-            raise BatchIsEmpty()
+        return Batch[K](batch_id=batch.batch_id,
+                        data=products)
 
 
 @dataclass
