@@ -5,7 +5,7 @@ from typing import (
 
 from typedflow.batch import Batch
 from typedflow.exceptions import BatchIsEmpty, FaultItem
-from typedflow.types import A, B
+from typedflow.types import T, K
 
 
 __all__ = ['Task', 'DataLoader', 'Dumper']
@@ -13,12 +13,12 @@ logger = logging.getLogger(__file__)
 
 
 @dataclass
-class Task(Generic[A, B]):
-    func: Callable[[A], B]
+class Task(Generic[T, K]):
+    func: Callable[[T], K]
 
     def process(self,
-                batch: Batch[A]) -> Batch[B]:
-        products: List[B] = []
+                batch: Batch[T]) -> Batch[K]:
+        products: List[K] = []
         for item in batch.data:
             if isinstance(item, FaultItem):
                 continue
@@ -29,40 +29,40 @@ class Task(Generic[A, B]):
                 products.append(FaultItem())
                 continue
         if len(products) > 0:
-            return Batch[B](batch_id=batch.batch_id,
+            return Batch[K](batch_id=batch.batch_id,
                             data=products)
         else:
             raise BatchIsEmpty()
 
 
 @dataclass
-class DataLoader(Generic[B]):
-    gen: Iterable[B]
+class DataLoader(Generic[K]):
+    gen: Iterable[K]
     batch_size: int = 16
 
-    def load(self) -> Generator[Batch[B], None, None]:
-        lst: List[B] = []
+    def load(self) -> Generator[Batch[K], None, None]:
+        lst: List[K] = []
         batch_id: int = 0
-        itr: Iterator[B] = iter(self.gen)
+        itr: Iterator[K] = iter(self.gen)
         while True:
             for _ in range(self.batch_size):
                 try:
-                    item: B = next(itr)
+                    item: K = next(itr)
                 except StopIteration:
-                    batch: Batch[B] = Batch[B](batch_id=batch_id, data=lst)
+                    batch: Batch[K] = Batch[K](batch_id=batch_id, data=lst)
                     if len(batch.data) > 0:
                         yield batch
                     return
                 lst.append(item)
-            batch: Batch[B] = Batch[B](batch_id=batch_id, data=lst)
+            batch: Batch[K] = Batch[K](batch_id=batch_id, data=lst)
             yield batch
             batch_id += 1
-            lst: List[B] = []  # noqa
+            lst: List[K] = []  # noqa
 
 
 @dataclass
-class Dumper(Generic[A]):
-    func: Callable[[Batch[A]], None]  # dumping function
+class Dumper(Generic[T]):
+    func: Callable[[Batch[T]], None]  # dumping function
 
-    def dump(self, batch: Batch[A]) -> None:
+    def dump(self, batch: Batch[T]) -> None:
         self.func(batch)

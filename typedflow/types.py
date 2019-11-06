@@ -1,13 +1,7 @@
-from typing import Hashable, TypeVar
-
-from typedflow.arguments import TaskArguments
+from typing import Hashable, TypedDict, TypeVar
 
 
-__all__ = ['A', 'B', 'T', 'K', 'H']
-
-# Task arguments
-A = TypeVar('A', bound=TaskArguments)
-B = TypeVar('B', bound=TaskArguments)
+__all__ = ['T', 'K', 'H']
 
 # Any types
 T = TypeVar('T')
