@@ -1,4 +1,4 @@
-from typing import Hashable, TypedDict, TypeVar
+from typing import Hashable, TypeVar
 
 
 __all__ = ['T', 'K', 'H']

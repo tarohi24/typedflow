@@ -1,5 +1,5 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import logging
 from typing import (
     Dict,
@@ -7,8 +7,7 @@ from typing import (
     List,
     Type,
     TypedDict,
-    TypeVar,
-    cast
+    TypeVar
 )
 
 from typedflow.batch import Batch
