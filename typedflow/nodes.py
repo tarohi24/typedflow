@@ -1,5 +1,5 @@
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import logging
 from typing import (
     Dict,
@@ -26,11 +26,15 @@ logger = logging.getLogger(__file__)
 TD = TypeVar('TD', bound=TypedDict)
 
 
+@dataclass
 class ProviderNode(Generic[K]):
     """
     LoaderNode or TaskNode
     """
-    def __init__(self):
+    succ_count: int = field(init=False)
+    cache_table: CacheTable[int, Batch[K]] = field(init=False)
+
+    def __post_init__(self):
         self.succ_count: int = 0
         self.cache_table: CacheTable[int, Batch[K]]\
             = CacheTable[int, Batch[K]](life=0)
@@ -44,13 +48,17 @@ class ProviderNode(Generic[K]):
         self.cache_table.life += 1
 
 
+@dataclass
 class ConsumerNode(Generic[T]):
     """
     TaskNode or DumpNode
     Note: this is not defined as a dataclass due to the inheritance problem
     see: https://stackoverflow.com/questions/51575931/class-inheritance-in-python-3-7-dataclasses  # noqa
     """
-    def __init__(self, arg_type: Type[T]):
+    arg_type: Type[T] = field(init=False)  # must be same as T
+    precs: Dict[str, ProviderNode[T]] = field(init=False)
+
+    def __post_init__(self, arg_type: Type[T]):
         self.arg_type: Type[T] = arg_type  # must be same as T
         self.precs: Dict[str, ProviderNode[T]] = dict()
 

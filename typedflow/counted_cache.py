@@ -35,3 +35,6 @@ class CacheTable(Generic[H, T]):
             key: H,
             value: T) -> None:
         self.cache_table[key] = CacheItem(count=self.life, value=value)
+
+    def __len__(self) -> int:
+        return len(self.cache_table)
