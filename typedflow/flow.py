@@ -28,7 +28,7 @@ class Flow:
             self.validate()
         batch_id: int = 0
         while True:
-            async for node in self.dump_nodes:
+            for node in self.dump_nodes:
                 await node.run_and_dump(batch_id=batch_id)
             if all([node.finished for node in self.dump_nodes]):
                 return

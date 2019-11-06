@@ -4,8 +4,8 @@ from typing import List, TypedDict
 import pytest
 
 from typedflow.batch import Batch
-from typedflow.tasks import Dumper, DataLoader
-from typedflow.nodes import DumpNode, LoaderNode
+from typedflow.tasks import Dumper, DataLoader, Task
+from typedflow.nodes import DumpNode, LoaderNode, TaskNode
 
 
 class IntStr(TypedDict):
@@ -42,7 +42,7 @@ def str_dump_node() -> DumpNode[str]:
 def int_str_dump_node() -> Dumper[IntStr]:
     def printer(batch: Batch[IntStr]) -> None:
         for item in batch.data:
-            print(f'{str(item["i"])} {item["str"]}')
+            print(f'{str(item["i"])} {item["s"]}')
     dumper: Dumper[IntStr] = Dumper(func=printer)
     node: DumpNode[IntStr] = DumpNode(arg_type=IntStr, dumper=dumper)
     return node
@@ -88,8 +88,7 @@ def test_batch_len_and_id(str_dump_node):
     batches.append(Batch(batch_id=1, data=[]))
     with pytest.raises(AssertionError):
         node._get_batch_id(batches)
-    with pytest.raises(AssertionError):
-        node._get_batch_len(batches)
+    assert node._get_batch_len(batches) == 0
 
 
 def test_merging(int_str_dump_node, int_loader_node, str_loader_node):
@@ -116,3 +115,16 @@ def test_accept_with_merging(int_str_dump_node, int_loader_node, str_loader_node
     batch = asyncio.run(node.accept(batch_id=0))
     assert batch.data[0] == {'i': 1, 's': 'hi'}
     assert batch.data[1] == {'i': 2, 's': 'hello'}
+
+
+def test_accept_with_different_levels(int_str_dump_node, int_loader_node, str_loader_node, capsys):
+    def ignore_first(s: str) -> str:
+        return s[1:]
+    task: Task[str, str] = Task(func=ignore_first)
+    ss_node: TaskNode[str, int] = TaskNode(task=task, arg_type=str)
+    ss_node.set_upstream_node('s', str_loader_node)
+    int_str_dump_node.set_upstream_node('i', int_loader_node)
+    int_str_dump_node.set_upstream_node('s', ss_node)
+    asyncio.run(int_str_dump_node.run_and_dump(batch_id=0))
+    out, _ = capsys.readouterr()
+    assert out == '1 i\n2 ello\n'
