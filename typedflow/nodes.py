@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 import logging
 from typing import (
     Dict,
+    Iterator,
     Generic,
     List,
     Type,
@@ -106,6 +107,11 @@ class ConsumerNode(Generic[T]):
 @dataclass
 class LoaderNode(ProviderNode[K]):
     loader: DataLoader[K]
+    itr: Iterator[K] = field(init=False)
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.itr: Iterator[K] = iter(self.loader.load())
 
     def get_or_produce_batch(self,
                              batch_id: int) -> Batch[K]:
@@ -113,7 +119,7 @@ class LoaderNode(ProviderNode[K]):
             return self.cache_table.get(batch_id)
         except KeyError:
             try:
-                batch: Batch[K] = self.loarder.load()
+                batch: Batch[K] = next(self.itr)
             except StopIteration:
                 return EndOfBatch()
             self.cache_table.set(key=batch_id, value=batch)
