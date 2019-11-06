@@ -77,9 +77,42 @@ def test_set_upstream(str_dump_node, str_loader_node, int_loader_node):
     assert str_loader_node._succ_count == 1
 
 
+def test_batch_len_and_id(str_dump_node):
+    node = str_dump_node
+    batches = [
+        Batch(batch_id=0, data=[1, 2]),
+        Batch(batch_id=0, data=[2, 3]),
+    ]
+    assert node._get_batch_id(batches) == 0
+    assert node._get_batch_len(batches) == 2
+    batches.append(Batch(batch_id=1, data=[]))
+    with pytest.raises(AssertionError):
+        node._get_batch_id(batches)
+    with pytest.raises(AssertionError):
+        node._get_batch_len(batches)
+
+
+def test_merging(int_str_dump_node, int_loader_node, str_loader_node):
+    node = int_str_dump_node
+    batch_str = Batch(batch_id=0, data=['hi', 'hello'])
+    batch_int = Batch(batch_id=0, data=[1, 2])
+    materials = {'s': batch_str, 'i': batch_int}
+    batch = node._merge_batches(materials)
+    assert batch.data[0] == {'s': 'hi', 'i': 1}
+    assert batch.data[1] == {'s': 'hello', 'i': 2}
+
+
+def test_accept_without_merging(str_dump_node, str_loader_node):
+    node = str_dump_node
+    node.set_upstream_node('s', str_loader_node)
+    asyncio.run(node.accept(batch_id=0))
+
+
 def test_accept_with_merging(int_str_dump_node, int_loader_node, str_loader_node):
     # single batch
     node = int_str_dump_node
     node.set_upstream_node('i', int_loader_node)
     node.set_upstream_node('s', str_loader_node)
-    asyncio.run(node.accept(batch_id=0))
+    batch = asyncio.run(node.accept(batch_id=0))
+    assert batch.data[0] == {'i': 1, 's': 'hi'}
+    assert batch.data[1] == {'i': 2, 's': 'hello'}

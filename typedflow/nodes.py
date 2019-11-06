@@ -69,20 +69,30 @@ class ConsumerNode(Generic[T]):
         self.precs[key] = node
         node.add_succ()
 
+    @staticmethod
+    def _get_batch_id(batches: List[Batch]) -> int:
+        batch_id: int = batches[0].batch_id
+        assert all([batch.batch_id == batch_id for batch in batches])
+        return batch_id
+
+    @staticmethod
+    def _get_batch_len(batches: List[Batch]) -> int:
+        batch_len: int = len(batches[0].data)
+        assert all([len(batch.data) == batch_len for batch in batches])
+        return batch_len
+
     def _merge_batches(self,
                        materials: Dict[str, Batch]) -> Batch[TD]:
         """
         TD is the same class as self.arg_type
         """
-        batch_id: int = next(iter(materials.values())).batch_id
-        material_data: Dict[str, List] = {key: batch.data
-                                          for key, batch
-                                          in materials.items()}
-        keys, values = list(zip(*material_data.items()))
-        data: List[TD] = [
-            self.arg_type({key: list(val) for key in keys})
-            for val in zip(*values)
-        ]
+        mat_batches: List[Batch] = list(materials.values())
+        batch_len: int = self._get_batch_len(mat_batches)
+        keys: List[str] = list(materials.keys())
+        data: List[TD] = list()
+        for i in range(batch_len):
+            data.append({key: materials[key].data[i] for key in keys})
+        batch_id: int = self._get_batch_id(mat_batches)
         batch = Batch(batch_id=batch_id, data=data)
         return batch
 
@@ -92,7 +102,7 @@ class ConsumerNode(Generic[T]):
         merge all the arguments items into an instance of T (=arg_type)
         """
         if len(self.precs) == 1:
-            prec: ProviderNode[T] = next(iter(self.prec.values()))
+            prec: ProviderNode[T] = next(iter(self.precs.values()))
             product: Batch[T] = await prec.get_or_produce_batch(batch_id=batch_id)
             return product
         else:
