@@ -9,8 +9,6 @@ from pathlib import Path
 import tempfile
 from typing import List, TypedDict
 
-import pytest
-
 from typedflow.batch import Batch
 from typedflow.flow import Flow
 from typedflow.tasks import Dumper, DataLoader, Task
@@ -37,10 +35,12 @@ def int_loader_node() -> LoaderNode[int]:
 
 
 def middle_task() -> TaskNode[IntStr, str]:
-    sl = str_loader_node()
-    il = int_loader_node()
+
     def count_chars(si: IntStr) -> str:
         return f'{si["s"]} {str(si["i"])}'
+
+    sl = str_loader_node()
+    il = int_loader_node()
     task = Task(func=count_chars)
     node = TaskNode(task=task, arg_type=IntStr)
     assert node.cache_table.life == 0
@@ -50,9 +50,11 @@ def middle_task() -> TaskNode[IntStr, str]:
 
 
 def path_load_node() -> Path:
+
     def gen_tmp_file():
         while True:
             yield Path(tempfile.mkstemp()[1])
+
     gen = gen_tmp_file()
     loader = DataLoader(gen=gen, batch_size=2)
     node = LoaderNode(loader=loader)
@@ -60,10 +62,11 @@ def path_load_node() -> Path:
 
 
 def print_dump() -> DumpNode[str]:
-    mt = middle_task()
     def printer(batch: Batch[str]) -> None:
         for item in batch.data:
             return
+
+    mt = middle_task()
     dumper: Dumper[str] = Dumper(func=printer)
     node: DumpNode[str] = DumpNode(arg_type=str, dumper=dumper)
     node.set_upstream_node('_', mt)

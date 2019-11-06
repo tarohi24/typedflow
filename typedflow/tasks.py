@@ -4,7 +4,7 @@ from typing import (
     Callable, Generic, Generator, Iterable, Iterator, List)
 
 from typedflow.batch import Batch
-from typedflow.exceptions import BatchIsEmpty, FaultItem
+from typedflow.exceptions import EndOfBatch, FaultItem
 from typedflow.types import T, K
 
 
