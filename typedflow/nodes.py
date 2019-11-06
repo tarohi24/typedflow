@@ -157,7 +157,7 @@ class TaskNode(ProviderNode[K], ConsumerNode[T]):
         try:
             return self.cache_table.get(batch_id)
         except KeyError:
-            arg: Batch[T] = await self.funnel(batch_id=batch_id)
+            arg: Batch[T] = await self.accept(batch_id=batch_id)
             product: Batch[K] = self.task.process(arg)
             return product
 
