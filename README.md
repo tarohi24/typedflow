@@ -1,5 +1,6 @@
-typedflow
-=========
+<p align="center">
+  <img src="/img/logo.png?raw=true">
+</p>
 
 A type-aware workflow engine working on Python
 
