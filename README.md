@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/img/logo.png?raw=true">
+  <img src="assets/img/logo.png?raw=true" width="60%">
 </p>
 
 A type-aware workflow engine working on Python
