@@ -11,7 +11,6 @@ from typing import List, TypedDict
 
 from typedflow.batch import Batch
 from typedflow.flow import Flow
-from typedflow.tasks import DataLoader
 from typedflow.nodes import DumpNode, LoaderNode, TaskNode
 
 
@@ -22,15 +21,12 @@ class IntStr(TypedDict):
 
 def str_loader_node() -> LoaderNode[str]:
     lst: List[str] = ['hi', 'hello', 'konnichiwa']
-    loader: DataLoader[str] = DataLoader(gen=lst, batch_size=2)
-    node: LoaderNode[str] = LoaderNode(loader=loader)
+    node: LoaderNode[str] = LoaderNode(orig=lst, batch_size=2)
     return node
 
 
 def int_loader_node() -> LoaderNode[int]:
-    lst: int = [1, 2, 3]
-    loader: DataLoader[int] = DataLoader(gen=lst, batch_size=2)
-    node: LoaderNode[int] = LoaderNode(loader=loader)
+    node: LoaderNode[int] = LoaderNode(orig=lst)
     return node
 
 
@@ -55,8 +51,7 @@ def path_load_node() -> Path:
             yield Path(tempfile.mkstemp()[1])
 
     gen = gen_tmp_file()
-    loader = DataLoader(gen=gen, batch_size=2)
-    node = LoaderNode(loader=loader)
+    node = LoaderNode(orig=gen, batch_size=2)
     return node
 
 

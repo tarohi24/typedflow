@@ -3,14 +3,12 @@ from typing import List
 import pytest
 
 from typedflow.nodes import LoaderNode
-from typedflow.tasks import DataLoader
 
 
 @pytest.fixture
 def loader_node() -> LoaderNode[str]:
     lst: List[str] = ['hi', 'hello', 'konnichiwa']
-    loader: DataLoader[str] = DataLoader(gen=lst, batch_size=2)
-    node: LoaderNode[str] = LoaderNode(loader=loader)
+    node: LoaderNode[str] = LoaderNode(orig=lst, batch_size=2)
     return node
 
 

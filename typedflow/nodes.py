@@ -15,9 +15,6 @@ from typing import (
 from typedflow.batch import Batch
 from typedflow.counted_cache import CacheTable
 from typedflow.exceptions import EndOfBatch, FaultItem
-from typedflow.tasks import (
-    DataLoader
-)
 from typedflow.types import T, K
 
 
@@ -122,12 +119,31 @@ class ConsumerNode(Generic[T]):
 
 @dataclass
 class LoaderNode(ProviderNode[K]):
-    loader: DataLoader[K]
+    orig: Iterable[K]
+    batch_size: int = 16
     itr: Iterator[K] = field(init=False)
-
+    
     def __post_init__(self):
-        super().__post_init__()
-        self.itr: Iterator[K] = iter(self.loader.load())
+        ProviderNode.__post_init__(self)
+        self.itr: Iterator[K] = iter(self.orig)
+
+    def load(self) -> Generator[Batch[K], None, None]:
+        lst: List[K] = []
+        batch_id: int = 0
+        while True:
+            for _ in range(self.batch_size):
+                try:
+                    item: K = next(self.itr)
+                except StopIteration:
+                    batch: Batch[K] = Batch[K](batch_id=batch_id, data=lst)
+                    if len(batch.data) > 0:
+                        yield batch
+                    return
+                lst.append(item)
+            batch: Batch[K] = Batch[K](batch_id=batch_id, data=lst)
+            yield batch
+            batch_id += 1
+            lst: List[K] = []  # noqa
 
     async def get_or_produce_batch(self,
                                    batch_id: int) -> Batch[K]:
@@ -135,7 +151,7 @@ class LoaderNode(ProviderNode[K]):
             return self.cache_table.get(batch_id)
         except KeyError:
             try:
-                batch: Batch[K] = next(self.itr)
+                batch: Batch[K] = next(self.load())
             except StopIteration:
                 raise EndOfBatch()
             self.cache_table.set(key=batch_id, value=batch)

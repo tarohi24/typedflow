@@ -4,7 +4,6 @@ from typing import List, TypedDict
 import pytest
 
 from typedflow.batch import Batch
-from typedflow.tasks import DataLoader
 from typedflow.nodes import DumpNode, LoaderNode, TaskNode
 
 
@@ -16,16 +15,14 @@ class IntStr(TypedDict):
 @pytest.fixture
 def str_loader_node() -> LoaderNode[str]:
     lst: List[str] = ['hi', 'hello', 'konnichiwa']
-    loader: DataLoader[str] = DataLoader(gen=lst, batch_size=2)
-    node: LoaderNode[str] = LoaderNode(loader=loader)
+    node: LoaderNode[str] = LoaderNode(orig=lst, batch_size=2)
     return node
 
 
 @pytest.fixture
 def int_loader_node() -> LoaderNode[int]:
     lst: int = [1, 2, 3]
-    loader: DataLoader[int] = DataLoader(gen=lst, batch_size=2)
-    node: LoaderNode[int] = LoaderNode(loader=loader)
+    node: LoaderNode[int] = LoaderNode(orig=lst, batch_size=2)
     return node
 
 
