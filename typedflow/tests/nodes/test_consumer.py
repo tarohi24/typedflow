@@ -4,7 +4,7 @@ from typing import List, TypedDict
 import pytest
 
 from typedflow.batch import Batch
-from typedflow.tasks import DataLoader, Task
+from typedflow.tasks import DataLoader
 from typedflow.nodes import DumpNode, LoaderNode, TaskNode
 
 
@@ -115,8 +115,7 @@ def test_accept_with_merging(int_str_dump_node, int_loader_node, str_loader_node
 def test_accept_with_different_levels(int_str_dump_node, int_loader_node, str_loader_node, capsys):
     def ignore_first(s: str) -> str:
         return s[1:]
-    task: Task[str, str] = Task(func=ignore_first)
-    ss_node: TaskNode[str, int] = TaskNode(task=task, arg_type=str)
+    ss_node: TaskNode[str, int] = TaskNode(func=ignore_first, arg_type=str)
     ss_node.set_upstream_node('s', str_loader_node)
     int_str_dump_node.set_upstream_node('i', int_loader_node)
     int_str_dump_node.set_upstream_node('s', ss_node)
@@ -131,5 +130,5 @@ def test_get_arg_types():
 
     cons: DumpNode[str] = DumpNode(arg_type=str, func=print_str)
     assert cons.get_arg_types() == {'s': str}
-    tasknode: TaskNode = TaskNode(arg_type=int, task=Task(print_str)) # dummy
+    tasknode: TaskNode = TaskNode(arg_type=int, func=print_str) # dummy
     assert tasknode.get_arg_types() == {'s': str}

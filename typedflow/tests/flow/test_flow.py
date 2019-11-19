@@ -11,7 +11,7 @@ from typing import List, TypedDict
 
 from typedflow.batch import Batch
 from typedflow.flow import Flow
-from typedflow.tasks import DataLoader, Task
+from typedflow.tasks import DataLoader
 from typedflow.nodes import DumpNode, LoaderNode, TaskNode
 
 
@@ -41,8 +41,7 @@ def middle_task() -> TaskNode[IntStr, str]:
 
     sl = str_loader_node()
     il = int_loader_node()
-    task = Task(func=count_chars)
-    node = TaskNode(task=task, arg_type=IntStr)
+    node = TaskNode(func=count_chars, arg_type=IntStr)
     assert node.cache_table.life == 0
     node.set_upstream_node('s', sl)
     node.set_upstream_node('i', il)

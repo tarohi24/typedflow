@@ -4,33 +4,11 @@ from typing import (
     Callable, Generic, Generator, Iterable, Iterator, List)
 
 from typedflow.batch import Batch
-from typedflow.exceptions import EndOfBatch, FaultItem
 from typedflow.types import T, K
 
 
-__all__ = ['Task', 'DataLoader']
+__all__ = ['DataLoader']
 logger = logging.getLogger(__file__)
-
-
-@dataclass
-class Task(Generic[T, K]):
-    func: Callable[[T], K]
-
-    def process(self,
-                batch: Batch[T]) -> Batch[K]:
-        if len(batch.data) == 0:
-            raise EndOfBatch()
-        products: List[K] = []
-        for item in batch.data:
-            if isinstance(item, FaultItem):
-                continue
-            try:
-                products.append(self.func(item))
-            except Exception as e:
-                logger.warn(repr(e))
-                products.append(FaultItem())
-        return Batch[K](batch_id=batch.batch_id,
-                        data=products)
 
 
 @dataclass

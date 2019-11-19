@@ -14,9 +14,9 @@ from typing import (
 
 from typedflow.batch import Batch
 from typedflow.counted_cache import CacheTable
-from typedflow.exceptions import EndOfBatch
+from typedflow.exceptions import EndOfBatch, FaultItem
 from typedflow.tasks import (
-    Task, DataLoader
+    DataLoader
 )
 from typedflow.types import T, K
 
@@ -142,21 +142,38 @@ class LoaderNode(ProviderNode[K]):
             return self.cache_table.get(batch_id)
 
 
+@dataclass(init=False)
 class TaskNode(ProviderNode[K], ConsumerNode[T]):
     """
     This is not a dataclass because it dataclass doesn't work
     if it is inherited from multiple super classes
     """
-    task: Task[T, K]
+    func: Callable[[T], K]
 
     def __init__(self,
-                 task: Task[T, K],
+                 func: Callable[[T], K],
                  arg_type: Type[T]):
-        self.task: Task[T, K] = task
+        self.func: Callable[[T], K] = func
         ConsumerNode.__init__(self, arg_type)
         ConsumerNode.__post_init__(self)
         ProviderNode.__init__(self)
         ProviderNode.__post_init__(self)
+
+    def process(self,
+                batch: Batch[T]) -> Batch[K]:
+        if len(batch.data) == 0:
+            raise EndOfBatch()
+        products: List[K] = []
+        for item in batch.data:
+            if isinstance(item, FaultItem):
+                continue
+            try:
+                products.append(self.func(item))
+            except Exception as e:
+                logger.warn(repr(e))
+                products.append(FaultItem())
+        return Batch[K](batch_id=batch.batch_id,
+                        data=products)
 
     async def get_or_produce_batch(self,
                                    batch_id: int) -> Batch[K]:
@@ -164,13 +181,13 @@ class TaskNode(ProviderNode[K], ConsumerNode[T]):
             return self.cache_table.get(batch_id)
         except KeyError:
             arg: Batch[T] = await self.accept(batch_id=batch_id)
-            product: Batch[K] = self.task.process(arg)
+            product: Batch[K] = self.process(arg)
             return product
 
     def get_arg_types(self) -> Dict[str, Type]:
         return {key: typ
                 for key, typ
-                in get_type_hints(self.task.func).items()
+                in get_type_hints(self.func).items()
                 if key != 'return'}
 
 @dataclass

@@ -3,7 +3,7 @@ from typing import List
 
 import pytest
 
-from typedflow.tasks import Task, DataLoader
+from typedflow.tasks import DataLoader
 from typedflow.nodes import TaskNode, LoaderNode
 
 
@@ -19,8 +19,7 @@ def str_loader_node() -> LoaderNode[str]:
 def tasknode(str_loader_node) -> TaskNode[str, int]:
     def count_chars(s: str) -> int:
         return len(s)
-    task: Task[str, int] = Task(func=count_chars)
-    node: TaskNode[str, int] = TaskNode(task=task, arg_type=str)
+    node: TaskNode[str, int] = TaskNode(func=count_chars, arg_type=str)
     node.set_upstream_node('s', str_loader_node)
     return node
 
