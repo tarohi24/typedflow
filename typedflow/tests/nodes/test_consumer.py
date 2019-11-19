@@ -4,7 +4,7 @@ from typing import List, TypedDict
 import pytest
 
 from typedflow.batch import Batch
-from typedflow.tasks import Dumper, DataLoader, Task
+from typedflow.tasks import DataLoader, Task
 from typedflow.nodes import DumpNode, LoaderNode, TaskNode
 
 
@@ -33,18 +33,16 @@ def int_loader_node() -> LoaderNode[int]:
 def str_dump_node() -> DumpNode[str]:
     def printer(batch: Batch[str]) -> None:
         print(batch.data)
-    dumper: Dumper[str] = Dumper(func=printer)
-    node: DumpNode[str] = DumpNode(dumper=dumper, arg_type=str)
+    node: DumpNode[str] = DumpNode(func=printer, arg_type=str)
     return node
 
 
 @pytest.fixture
-def int_str_dump_node() -> Dumper[IntStr]:
+def int_str_dump_node() -> DumpNode[IntStr]:
     def printer(batch: Batch[IntStr]) -> None:
         for item in batch.data:
             print(f'{str(item["i"])} {item["s"]}')
-    dumper: Dumper[IntStr] = Dumper(func=printer)
-    node: DumpNode[IntStr] = DumpNode(arg_type=IntStr, dumper=dumper)
+    node: DumpNode[IntStr] = DumpNode(arg_type=IntStr, func=printer)
     return node
 
 
@@ -52,9 +50,6 @@ def test_init_with_argtype():
     def printer(batch: Batch[IntStr]) -> None:
         for item in batch.data:
             print(f'{str(item["i"])} {item["str"]}')
-    dumper: Dumper[IntStr] = Dumper(func=printer)
-    with pytest.raises(TypeError):
-        DumpNode[str](dumper)
 
 
 def test_init(str_dump_node):
@@ -134,7 +129,7 @@ def test_get_arg_types():
     def print_str(s: str) -> None:
         pass
 
-    cons: DumpNode[str] = DumpNode(arg_type=str, dumper=Dumper(print_str))
+    cons: DumpNode[str] = DumpNode(arg_type=str, func=print_str)
     assert cons.get_arg_types() == {'s': str}
     tasknode: TaskNode = TaskNode(arg_type=int, task=Task(print_str)) # dummy
     assert tasknode.get_arg_types() == {'s': str}

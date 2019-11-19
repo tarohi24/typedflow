@@ -11,7 +11,7 @@ from typing import List, TypedDict
 
 from typedflow.batch import Batch
 from typedflow.flow import Flow
-from typedflow.tasks import Dumper, DataLoader, Task
+from typedflow.tasks import DataLoader, Task
 from typedflow.nodes import DumpNode, LoaderNode, TaskNode
 
 
@@ -67,8 +67,7 @@ def print_dump() -> DumpNode[str]:
             return
 
     mt = middle_task()
-    dumper: Dumper[str] = Dumper(func=printer)
-    node: DumpNode[str] = DumpNode(arg_type=str, dumper=dumper)
+    node: DumpNode[str] = DumpNode(arg_type=str, func=printer)
     node.set_upstream_node('_', mt)
     return node
 
@@ -87,8 +86,7 @@ def save_dump() -> DumpNode[str]:
     pl = path_load_node()
     assert mt._succ_count == 0
     assert mt.cache_table.life == 0
-    dumper: Dumper[str] = Dumper(func=saver)
-    node: DumpNode[str] = DumpNode(arg_type=PathedStr, dumper=dumper)
+    node: DumpNode[str] = DumpNode(arg_type=PathedStr, func=saver)
     node.set_upstream_node('s', mt)
     node.set_upstream_node('p', pl)
     assert pl.cache_table.life == 1
@@ -107,3 +105,8 @@ def flow():
 def test_flow_run():
     fl = flow()
     asyncio.run(fl.run())
+
+
+def test_type_check():
+    fl = flow()
+    fl.typecheck()

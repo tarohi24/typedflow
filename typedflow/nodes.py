@@ -16,7 +16,7 @@ from typedflow.batch import Batch
 from typedflow.counted_cache import CacheTable
 from typedflow.exceptions import EndOfBatch
 from typedflow.tasks import (
-    Task, DataLoader, Dumper
+    Task, DataLoader
 )
 from typedflow.types import T, K
 
@@ -175,7 +175,7 @@ class TaskNode(ProviderNode[K], ConsumerNode[T]):
 
 @dataclass
 class DumpNode(ConsumerNode[T]):
-    dumper: Dumper[T]
+    func: Callable[[Batch[T]], None]  # dumping function
     finished: bool = False
 
     async def run_and_dump(self,
@@ -183,7 +183,7 @@ class DumpNode(ConsumerNode[T]):
         if not self.finished:
             try:
                 batch: Batch[T] = await self.accept(batch_id=batch_id)
-                self.dumper.dump(batch)
+                self.dump(batch)
             except EndOfBatch:
                 self.finished: bool = True
         else:
@@ -192,5 +192,8 @@ class DumpNode(ConsumerNode[T]):
     def get_arg_types(self) -> Dict[str, Type]:
         return {key: typ
                 for key, typ
-                in get_type_hints(self.dumper.func).items()
+                in get_type_hints(self.func).items()
                 if key != 'return'}
+
+    def dump(self, batch: Batch[T]) -> None:
+        self.func(batch)

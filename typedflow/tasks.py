@@ -8,7 +8,7 @@ from typedflow.exceptions import EndOfBatch, FaultItem
 from typedflow.types import T, K
 
 
-__all__ = ['Task', 'DataLoader', 'Dumper']
+__all__ = ['Task', 'DataLoader']
 logger = logging.getLogger(__file__)
 
 
@@ -56,11 +56,3 @@ class DataLoader(Generic[K]):
             yield batch
             batch_id += 1
             lst: List[K] = []  # noqa
-
-
-@dataclass
-class Dumper(Generic[T]):
-    func: Callable[[Batch[T]], None]  # dumping function
-
-    def dump(self, batch: Batch[T]) -> None:
-        self.func(batch)
