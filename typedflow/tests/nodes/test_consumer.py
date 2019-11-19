@@ -128,3 +128,13 @@ def test_accept_with_different_levels(int_str_dump_node, int_loader_node, str_lo
     asyncio.run(int_str_dump_node.run_and_dump(batch_id=0))
     out, _ = capsys.readouterr()
     assert out == '1 i\n2 ello\n'
+
+
+def test_get_arg_types():
+    def print_str(s: str) -> None:
+        pass
+
+    cons: DumpNode[str] = DumpNode(arg_type=str, dumper=Dumper(print_str))
+    assert cons.get_arg_types() == {'s': str}
+    tasknode: TaskNode = TaskNode(arg_type=int, task=Task(print_str)) # dummy
+    assert tasknode.get_arg_types() == {'s': str}

@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import logging
 from typing import (
+    get_type_hints,
     Dict,
     Iterator,
     Generic,
@@ -68,6 +69,12 @@ class ConsumerNode(Generic[T]):
         assert key not in self.precs
         self.precs[key] = node
         node.add_succ()
+
+    def get_arg_types(self) -> Dict[str, Type]:
+        """
+        should be implemented in the subclass
+        """
+        ...
 
     @staticmethod
     def _get_batch_id(batches: List[Batch]) -> int:
@@ -160,6 +167,11 @@ class TaskNode(ProviderNode[K], ConsumerNode[T]):
             product: Batch[K] = self.task.process(arg)
             return product
 
+    def get_arg_types(self) -> Dict[str, Type]:
+        return {key: typ
+                for key, typ
+                in get_type_hints(self.task.func).items()
+                if key != 'return'}
 
 @dataclass
 class DumpNode(ConsumerNode[T]):
@@ -176,3 +188,9 @@ class DumpNode(ConsumerNode[T]):
                 self.finished: bool = True
         else:
             return
+
+    def get_arg_types(self) -> Dict[str, Type]:
+        return {key: typ
+                for key, typ
+                in get_type_hints(self.dumper.func).items()
+                if key != 'return'}
