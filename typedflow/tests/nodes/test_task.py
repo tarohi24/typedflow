@@ -3,15 +3,15 @@ from typing import List
 
 import pytest
 
-from typedflow.tasks import Task, DataLoader
 from typedflow.nodes import TaskNode, LoaderNode
 
 
 @pytest.fixture
 def str_loader_node() -> LoaderNode[str]:
-    lst: List[str] = ['hi', 'hello', 'konnichiwa']
-    loader: DataLoader[str] = DataLoader(gen=lst, batch_size=2)
-    node: LoaderNode[str] = LoaderNode(loader=loader)
+    def lst() -> List[str]:
+        return ['hi', 'hello', 'konnichiwa']
+    node: LoaderNode[str] = LoaderNode(func=lst,
+                                       batch_size=2)
     return node
 
 
@@ -19,8 +19,7 @@ def str_loader_node() -> LoaderNode[str]:
 def tasknode(str_loader_node) -> TaskNode[str, int]:
     def count_chars(s: str) -> int:
         return len(s)
-    task: Task[str, int] = Task(func=count_chars)
-    node: TaskNode[str, int] = TaskNode(task=task, arg_type=str)
+    node: TaskNode[str, int] = TaskNode(func=count_chars)
     node.set_upstream_node('s', str_loader_node)
     return node
 

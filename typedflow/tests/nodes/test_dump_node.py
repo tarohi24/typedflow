@@ -3,7 +3,7 @@ from typing import TypedDict
 import pytest
 
 from typedflow.batch import Batch
-from typedflow.tasks import Dumper
+from typedflow.nodes import DumpNode
 
 
 class PrintableArg(TypedDict):
@@ -15,19 +15,18 @@ class PrintableArg(TypedDict):
 
 
 @pytest.fixture
-def dumper():
+def dump_node():
 
-    def func(batch):
-        for arg in batch.data:
-            print(str(arg))
+    def func(s: str) -> None:
+        print(s)
 
-    dumper = Dumper(func=func)
-    return dumper
+    node = DumpNode(func=func)
+    return node
 
 
-def test_print_dump(dumper, capsys):
+def test_print_dump(dump_node, capsys):
     data = [PrintableArg(s='hi', i=i) for i in range(3)]
     batch = Batch(data=data, batch_id=1)
-    dumper.dump(batch)
+    dump_node.dump(batch)
     out, _ = capsys.readouterr()
     assert out == ('\n'.join([str(a) for a in data]) + '\n')

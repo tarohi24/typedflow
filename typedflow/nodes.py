@@ -2,9 +2,15 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import logging
 from typing import (
+    get_args,
+    get_type_hints,
+    Any,
+    Callable,
     Dict,
     Iterator,
+    Iterable,
     Generic,
+    Generator,
     List,
     Type,
     TypedDict,
@@ -13,10 +19,7 @@ from typing import (
 
 from typedflow.batch import Batch
 from typedflow.counted_cache import CacheTable
-from typedflow.exceptions import EndOfBatch
-from typedflow.tasks import (
-    Task, DataLoader, Dumper
-)
+from typedflow.exceptions import EndOfBatch, FaultItem
 from typedflow.types import T, K
 
 
@@ -32,6 +35,7 @@ class ProviderNode(Generic[K]):
     """
     LoaderNode or TaskNode
     """
+    func: Callable[..., K]  # not a generator in order to get annotatinos
     cache_table: CacheTable[int, Batch[K]] = field(init=False)
     _succ_count: int = field(init=False)
 
@@ -39,6 +43,9 @@ class ProviderNode(Generic[K]):
         self._succ_count: int = 0
         self.cache_table: CacheTable[int, Batch[K]]\
             = CacheTable[int, Batch[K]](life=0)
+
+    def get_return_type(self) -> Type[K]:
+        ...
 
     def get_or_produce_batch(self,
                              batch_id: int) -> Batch[K]:
@@ -56,7 +63,7 @@ class ConsumerNode(Generic[T]):
     Note: this is not defined as a dataclass due to the inheritance problem
     see: https://stackoverflow.com/questions/51575931/class-inheritance-in-python-3-7-dataclasses  # noqa
     """
-    arg_type: Type[T]  # must be same as T
+    func: Callable[[T], Any]
     precs: Dict[str, ProviderNode[T]] = field(init=False)
 
     def __post_init__(self):
@@ -68,6 +75,14 @@ class ConsumerNode(Generic[T]):
         assert key not in self.precs
         self.precs[key] = node
         node.add_succ()
+
+    def get_arg_type(self) -> Type[T]:
+        args: Dict[str, Type] = {key: typ
+                                 for key, typ
+                                 in get_type_hints(self.func).items()
+                                 if key != 'return'}
+        assert len(args) == 1
+        return next(iter(args.values()))
 
     @staticmethod
     def _get_batch_id(batches: List[Batch]) -> int:
@@ -112,15 +127,53 @@ class ConsumerNode(Generic[T]):
             merged_batch: Batch[T] = self._merge_batches(materials=materials)
             return merged_batch
 
+    def __lt__(self,
+               another: ProviderNode[T]) -> Callable[[str], None]:
+        assert isinstance(another, ProviderNode), 'In a < b, b should be an ProviderNode instance'
+        func: Callable[[str], None] = lambda s: self.set_upstream_node(s, another)
+        return func
+
+    def __gt__(self, another):
+        raise AssertionError('ConsumerNode does not support > operation')
+
 
 @dataclass
 class LoaderNode(ProviderNode[K]):
-    loader: DataLoader[K]
+    """
+    caution: We don't offer any interfaces to accept generator.
+    We only accept generative function because we cannot obtain any
+    typing information from a genarator.
+    This behavior may change if Python supports getting typings from
+    a generator
+    """
+    batch_size: int = 16
     itr: Iterator[K] = field(init=False)
 
     def __post_init__(self):
-        super().__post_init__()
-        self.itr: Iterator[K] = iter(self.loader.load())
+        ProviderNode.__post_init__(self)
+        self.itr: Iterator[K] = iter(self.func())
+
+    def get_return_type(self) -> Type[K]:
+        typ: Type[Iterable[K]] = get_type_hints(self.func)['return']
+        return get_args(typ)[0]
+
+    def load(self) -> Generator[Batch[K], None, None]:
+        lst: List[K] = []
+        batch_id: int = 0
+        while True:
+            for _ in range(self.batch_size):
+                try:
+                    item: K = next(self.itr)
+                except StopIteration:
+                    batch: Batch[K] = Batch[K](batch_id=batch_id, data=lst)
+                    if len(batch.data) > 0:
+                        yield batch
+                    return
+                lst.append(item)
+            batch: Batch[K] = Batch[K](batch_id=batch_id, data=lst)
+            yield batch
+            batch_id += 1
+            lst: List[K] = []  # noqa
 
     async def get_or_produce_batch(self,
                                    batch_id: int) -> Batch[K]:
@@ -128,28 +181,54 @@ class LoaderNode(ProviderNode[K]):
             return self.cache_table.get(batch_id)
         except KeyError:
             try:
-                batch: Batch[K] = next(self.itr)
+                batch: Batch[K] = next(self.load())
             except StopIteration:
                 raise EndOfBatch()
             self.cache_table.set(key=batch_id, value=batch)
             return self.cache_table.get(batch_id)
 
+    def __gt__(self,
+               another: ConsumerNode[K]) -> Callable[[str], None]:
+        assert isinstance(another, ConsumerNode)
+        return another < self
 
-class TaskNode(ProviderNode[K], ConsumerNode[T]):
+    def __lt__(self, another):
+        raise AssertionError('ConsumerNode does not support > operation')
+
+
+@dataclass(init=False)
+class TaskNode(ConsumerNode[T], ProviderNode[K]):
     """
     This is not a dataclass because it dataclass doesn't work
     if it is inherited from multiple super classes
     """
-    task: Task[T, K]
 
     def __init__(self,
-                 task: Task[T, K],
-                 arg_type: Type[T]):
-        self.task: Task[T, K] = task
-        ConsumerNode.__init__(self, arg_type)
+                 func: Callable[[T], K]):
+        ConsumerNode.__init__(self, func=func)
         ConsumerNode.__post_init__(self)
-        ProviderNode.__init__(self)
+        ProviderNode.__init__(self, func=func)
         ProviderNode.__post_init__(self)
+
+    def get_return_type(self) -> Type[K]:
+        typ: Type[Iterable[K]] = get_type_hints(self.func)['return']
+        return typ
+
+    def process(self,
+                batch: Batch[T]) -> Batch[K]:
+        if len(batch.data) == 0:
+            raise EndOfBatch()
+        products: List[K] = []
+        for item in batch.data:
+            if isinstance(item, FaultItem):
+                continue
+            try:
+                products.append(self.func(item))
+            except Exception as e:
+                logger.warn(repr(e))
+                products.append(FaultItem())
+        return Batch[K](batch_id=batch.batch_id,
+                        data=products)
 
     async def get_or_produce_batch(self,
                                    batch_id: int) -> Batch[K]:
@@ -157,13 +236,12 @@ class TaskNode(ProviderNode[K], ConsumerNode[T]):
             return self.cache_table.get(batch_id)
         except KeyError:
             arg: Batch[T] = await self.accept(batch_id=batch_id)
-            product: Batch[K] = self.task.process(arg)
+            product: Batch[K] = self.process(arg)
             return product
 
 
 @dataclass
 class DumpNode(ConsumerNode[T]):
-    dumper: Dumper[T]
     finished: bool = False
 
     async def run_and_dump(self,
@@ -171,8 +249,12 @@ class DumpNode(ConsumerNode[T]):
         if not self.finished:
             try:
                 batch: Batch[T] = await self.accept(batch_id=batch_id)
-                self.dumper.dump(batch)
+                self.dump(batch)
             except EndOfBatch:
                 self.finished: bool = True
         else:
             return
+
+    def dump(self, batch: Batch[T]) -> None:
+        for item in batch.data:
+            self.func(item)

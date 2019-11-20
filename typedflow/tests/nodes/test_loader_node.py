@@ -1,18 +1,54 @@
 import asyncio
-from typing import List
+from typing import Generator, List, TypedDict
 
 import pytest
 
 from typedflow.nodes import LoaderNode
-from typedflow.tasks import DataLoader
 
 
 @pytest.fixture
 def loader_node() -> LoaderNode[str]:
-    lst: List[str] = ['hi', 'hello', 'konnichiwa']
-    loader: DataLoader[str] = DataLoader(gen=lst, batch_size=2)
-    node: LoaderNode[str] = LoaderNode(loader=loader)
+    def load() -> List[str]:
+        lst: List[str] = ['hi', 'hello', 'konnichiwa']
+        return lst
+    node: LoaderNode[str] = LoaderNode(func=load,
+                                       batch_size=2)
     return node
+
+
+class SampleArg(TypedDict):
+    s: str
+    i: int
+
+
+def test_load():
+    def gen() -> Generator[int, None, None]:
+        for i in range(3):
+            yield SampleArg(s='hi', i=i)
+    # first batch
+    loader: LoaderNode[int] = LoaderNode(func=gen,
+                                         batch_size=2)
+    load = loader.load()
+    batch_1 = next(load)
+    assert batch_1.batch_id == 0
+    strs = [a['s'] for a in batch_1.data]
+    ints = [a['i'] for a in batch_1.data]
+    assert strs == ['hi', 'hi']
+    assert ints == [0, 1]
+
+    # second batch
+    batch_2 = next(load)
+    assert batch_2.batch_id == 1
+    strs = [a['s'] for a in batch_2.data]
+    ints = [a['i'] for a in batch_2.data]
+    assert strs == ['hi', ]
+    assert ints == [2, ]
+
+    # no more batch
+    with pytest.raises(StopIteration):
+        next(loader.load())
+    with pytest.raises(StopIteration):
+        next(loader.load())
 
 
 def test_get_or_produce_batch(loader_node):
