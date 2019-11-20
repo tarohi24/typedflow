@@ -1,5 +1,5 @@
 import asyncio
-from typing import List
+from typing import List, TypedDict
 
 import pytest
 
@@ -13,11 +13,17 @@ def loader_node() -> LoaderNode[str]:
     return node
 
 
+class SampleArg(TypedDict):
+    s: str
+    i: int
+
+
 def test_load():
     gen: Generator[int, None, None] = (SampleArg(s='hi', i=i) for i in range(3))
     # first batch
     loader: LoaderNode[int] = LoaderNode(orig=gen, batch_size=2)
-    batch_1 = next(loader.load())
+    load = loader.load()
+    batch_1 = next(load)
     assert batch_1.batch_id == 0
     strs = [a['s'] for a in batch_1.data]
     ints = [a['i'] for a in batch_1.data]
@@ -25,7 +31,7 @@ def test_load():
     assert ints == [0, 1]
 
     # second batch
-    batch_2 = next(loader.load())
+    batch_2 = next(load)
     assert batch_2.batch_id == 1
     strs = [a['s'] for a in batch_2.data]
     ints = [a['i'] for a in batch_2.data]
@@ -34,9 +40,9 @@ def test_load():
 
     # no more batch
     with pytest.raises(StopIteration):
-        next(iter(gen))
+        next(loader.load())
     with pytest.raises(StopIteration):
-        next(iter(gen))
+        next(loader.load())
 
 
 def test_get_or_produce_batch(loader_node):

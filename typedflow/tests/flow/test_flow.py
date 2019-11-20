@@ -26,6 +26,7 @@ def str_loader_node() -> LoaderNode[str]:
 
 
 def int_loader_node() -> LoaderNode[int]:
+    lst = list(range(3))
     node: LoaderNode[int] = LoaderNode(orig=lst)
     return node
 
