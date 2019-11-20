@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 import logging
-from typing import get_type_hints, Callable, List, Deque, Tuple, Type
+from typing import get_type_hints, Callable, List, Deque, Dict, Tuple, Type, TypedDict
 
 from typedflow.nodes import ConsumerNode, DumpNode
 
@@ -36,7 +36,8 @@ class Flow:
 
     def typecheck(self) -> None:
         """
-        Raises exceptions only if type check fails
+        Check type consistency with inputs/outputs.
+        Return nothing when there are no errors, unless raise AssertionError.
         """
         cands: Deque[Tuple[ConsumerNode, Dict[str, ProviderNode]]] = Deque()
         # initially check all dumps
@@ -48,7 +49,15 @@ class Flow:
                 node, ups_dict = cands.pop()
             except IndexError:
                 break
-            args: Dict[str, Type] = node.get_arg_types()
-            prov_return_types: Dict[str, Type] = {name: node.get_return_type()
-                                                  for name, node in ups_dict.items()}
-            assert all(args[key] == prov_return_types[key] for key in args.keys())
+            arg_type: Type = node.get_arg_type()
+            if len(node.precs) == 1:
+                assert len(ups_dict) == 1
+                ups_node: ProviderNode = next(iter(ups_dict.values()))
+                assert arg_type == ups_node.get_return_type()
+            elif len(node.precs) > 1:
+                annotations: Dict[str, Type] = arg_type.__annotations__
+                assert len(ups_dict) == len(annotations)
+                for key in arg_type.keys():
+                    ups_dict[key].get_return_type() == [key]
+            else:
+                raise AssertionError()

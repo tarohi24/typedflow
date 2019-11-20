@@ -1,5 +1,5 @@
 import asyncio
-from typing import List, TypedDict
+from typing import Generator, List, TypedDict
 
 import pytest
 
@@ -8,8 +8,11 @@ from typedflow.nodes import LoaderNode
 
 @pytest.fixture
 def loader_node() -> LoaderNode[str]:
-    lst: List[str] = ['hi', 'hello', 'konnichiwa']
-    node: LoaderNode[str] = LoaderNode(orig=lst, batch_size=2, return_type=str)
+    def load() -> List[str]:
+        lst: List[str] = ['hi', 'hello', 'konnichiwa']
+        return lst
+    node: LoaderNode[str] = LoaderNode(func=load,
+                                       batch_size=2)
     return node
 
 
@@ -19,9 +22,12 @@ class SampleArg(TypedDict):
 
 
 def test_load():
-    gen: Generator[int, None, None] = (SampleArg(s='hi', i=i) for i in range(3))
+    def gen() -> Generator[int, None, None]:
+        for i in range(3):
+            yield SampleArg(s='hi', i=i)
     # first batch
-    loader: LoaderNode[int] = LoaderNode(orig=gen, batch_size=2, return_type=int)
+    loader: LoaderNode[int] = LoaderNode(func=gen,
+                                         batch_size=2)
     load = loader.load()
     batch_1 = next(load)
     assert batch_1.batch_id == 0

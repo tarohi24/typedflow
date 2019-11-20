@@ -4,6 +4,7 @@ import logging
 from typing import (
     get_args,
     get_type_hints,
+    Any,
     Dict,
     Iterator,
     Generic,
@@ -31,6 +32,7 @@ class ProviderNode(Generic[K]):
     """
     LoaderNode or TaskNode
     """
+    func: Callable[..., K]  # not a generator in order to get annotatinos
     cache_table: CacheTable[int, Batch[K]] = field(init=False)
     _succ_count: int = field(init=False)
 
@@ -58,6 +60,7 @@ class ConsumerNode(Generic[T]):
     Note: this is not defined as a dataclass due to the inheritance problem
     see: https://stackoverflow.com/questions/51575931/class-inheritance-in-python-3-7-dataclasses  # noqa
     """
+    func: Callable[[T], Any]
     precs: Dict[str, ProviderNode[T]] = field(init=False)
 
     def __post_init__(self):
@@ -70,11 +73,13 @@ class ConsumerNode(Generic[T]):
         self.precs[key] = node
         node.add_succ()
 
-    def get_arg_types(self) -> Dict[str, Type]:
-        """
-        should be implemented in the subclass
-        """
-        ...
+    def get_arg_type(self) -> Type[T]:
+        args: Dict[str, Type] = {key: typ
+                                 for key, typ
+                                 in get_type_hints(self.func).items()
+                                 if key != 'return'}
+        assert len(args) == 1
+        return next(iter(args.values()))
 
     @staticmethod
     def _get_batch_id(batches: List[Batch]) -> int:
@@ -122,17 +127,23 @@ class ConsumerNode(Generic[T]):
 
 @dataclass
 class LoaderNode(ProviderNode[K]):
-    orig: Iterable[K]
-    return_type: Type[K]  # currently necessary
+    """
+    caution: We don't offer any interfaces to accept generator.
+    We only accept generative function because we cannot obtain any
+    typing information from a genarator.
+    This behavior may change if Python supports getting typings from
+    a generator
+    """
     batch_size: int = 16
     itr: Iterator[K] = field(init=False)
-    
+
     def __post_init__(self):
         ProviderNode.__post_init__(self)
-        self.itr: Iterator[K] = iter(self.orig)
+        self.itr: Iterator[K] = iter(self.func())
 
     def get_return_type(self) -> Type[K]:
-        return self.return_type
+        typ: Type[Iterable[K]] = get_type_hints(self.func)['return']
+        return get_args(typ)[0]
 
     def load(self) -> Generator[Batch[K], None, None]:
         lst: List[K] = []
@@ -166,20 +177,22 @@ class LoaderNode(ProviderNode[K]):
 
 
 @dataclass(init=False)
-class TaskNode(ProviderNode[K], ConsumerNode[T]):
+class TaskNode(ConsumerNode[T], ProviderNode[K]):
     """
     This is not a dataclass because it dataclass doesn't work
     if it is inherited from multiple super classes
     """
-    func: Callable[[T], K]
 
     def __init__(self,
                  func: Callable[[T], K]):
-        self.func: Callable[[T], K] = func
-        ConsumerNode.__init__(self)
+        ConsumerNode.__init__(self, func=func)
         ConsumerNode.__post_init__(self)
-        ProviderNode.__init__(self)
+        ProviderNode.__init__(self, func=func)
         ProviderNode.__post_init__(self)
+
+    def get_return_type(self) -> Type[K]:
+        typ: Type[Iterable[K]] = get_type_hints(self.func)['return']
+        return typ
 
     def process(self,
                 batch: Batch[T]) -> Batch[K]:
@@ -206,18 +219,8 @@ class TaskNode(ProviderNode[K], ConsumerNode[T]):
             product: Batch[K] = self.process(arg)
             return product
 
-    def get_arg_types(self) -> Dict[str, Type]:
-        return {key: typ
-                for key, typ
-                in get_type_hints(self.func).items()
-                if key != 'return'}
-
-    def get_return_type(self) -> Type[K]:
-        return get_type_hints(self.func)['return']
-
 @dataclass
 class DumpNode(ConsumerNode[T]):
-    func: Callable[[Batch[T]], None]  # dumping function
     finished: bool = False
 
     async def run_and_dump(self,
@@ -231,13 +234,6 @@ class DumpNode(ConsumerNode[T]):
         else:
             return
 
-    def get_arg_types(self) -> Dict[str, Type]:
-        args: Dict[str, Type[T]] = {key: get_args(batch_typ)[0]
-                                    for key, batch_typ
-                                    in get_type_hints(self.func).items()
-                                    if key != 'return'}
-        assert len(args) == 1
-        return args
-        
     def dump(self, batch: Batch[T]) -> None:
-        self.func(batch)
+        for item in batch.data:
+            self.func(item)

@@ -1,5 +1,5 @@
 import asyncio
-from typing import List, TypedDict
+from typing import Generator, List, TypedDict
 
 import pytest
 
@@ -8,49 +8,47 @@ from typedflow.nodes import DumpNode, LoaderNode, TaskNode
 
 
 class IntStr(TypedDict):
-    i: int
     s: str
+    i: int
+
 
 
 @pytest.fixture
 def str_loader_node() -> LoaderNode[str]:
-    lst: List[str] = ['hi', 'hello', 'konnichiwa']
-    node: LoaderNode[str] = LoaderNode(orig=lst,
-                                       return_type=str,
+    def load_str() -> Generator[str, None, None]:
+        lst: List[str] = ['hi', 'hello', 'konnichiwa']
+        for item in lst:
+            yield item
+    node: LoaderNode[str] = LoaderNode(func=load_str,
                                        batch_size=2)
     return node
 
 
 @pytest.fixture
 def int_loader_node() -> LoaderNode[int]:
-    lst: int = [1, 2, 3]
-    node: LoaderNode[int] = LoaderNode(orig=lst,
-                                       return_type=int,
+    def load_int() -> Generator[int, None, None]:
+        lst: int = [1, 2, 3]
+        for item in lst:
+            yield item
+    node: LoaderNode[str] = LoaderNode(func=load_int,
                                        batch_size=2)
     return node
 
 
 @pytest.fixture
 def str_dump_node() -> DumpNode[str]:
-    def printer(batch: Batch[str]) -> None:
-        print(batch.data)
+    def printer(s: str) -> None:
+        print(s)
     node: DumpNode[str] = DumpNode(func=printer)
     return node
 
 
 @pytest.fixture
 def int_str_dump_node() -> DumpNode[IntStr]:
-    def printer(batch: Batch[IntStr]) -> None:
-        for item in batch.data:
-            print(f'{str(item["i"])} {item["s"]}')
+    def printer(item: IntStr) -> None:
+        print(f'{str(item["i"])} {item["s"]}')
     node: DumpNode[IntStr] = DumpNode(func=printer)
     return node
-
-
-def test_init_with_argtype():
-    def printer(batch: Batch[IntStr]) -> None:
-        for item in batch.data:
-            print(f'{str(item["i"])} {item["str"]}')
 
 
 def test_init(str_dump_node):
@@ -128,10 +126,5 @@ def test_get_arg_types():
     def print_str(s: str) -> None:
         pass
 
-    def print_batch(b: Batch[str]) -> None:
-        pass
-
-    cons: DumpNode[str] = DumpNode(func=print_batch)
-    assert cons.get_arg_types() == {'b': str}
-    tasknode: TaskNode = TaskNode(func=print_str)
-    assert tasknode.get_arg_types() == {'s': str}
+    cons: DumpNode[str] = DumpNode(func=print_str)
+    assert cons.get_arg_type () == str

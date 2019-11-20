@@ -7,9 +7,9 @@ from typedflow.nodes import LoaderNode
 
 @pytest.fixture
 def loader_node() -> LoaderNode[str]:
-    lst: List[str] = ['hi', 'hello', 'konnichiwa']
-    node: LoaderNode[str] = LoaderNode(orig=lst,
-                                       return_type=str,
+    def lst() -> List[str]:
+        return ['hi', 'hello', 'konnichiwa']
+    node: LoaderNode[str] = LoaderNode(func=lst,
                                        batch_size=2)
     return node
 

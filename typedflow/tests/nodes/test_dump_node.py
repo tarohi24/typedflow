@@ -17,9 +17,8 @@ class PrintableArg(TypedDict):
 @pytest.fixture
 def dump_node():
 
-    def func(batch):
-        for arg in batch.data:
-            print(str(arg))
+    def func(s: str) -> None:
+        print(s)
 
     node = DumpNode(func=func)
     return node
