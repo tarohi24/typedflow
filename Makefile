@@ -51,7 +51,7 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr .pytest_cache
 
 lint: ## check style with flake8
-	autoflake --in-place --remove-all-unused-imports -r typedflow tests || true
+	autoflake --in-place --remove-all-unused-imports -r typedflow || true
 	flake8 typedflow tests
 
 test: ## run tests quickly with the default Python

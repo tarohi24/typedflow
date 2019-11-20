@@ -257,4 +257,5 @@ class DumpNode(ConsumerNode[T]):
 
     def dump(self, batch: Batch[T]) -> None:
         for item in batch.data:
-            self.func(item)
+            if not isinstance(item, FaultItem):
+                self.func(item)
