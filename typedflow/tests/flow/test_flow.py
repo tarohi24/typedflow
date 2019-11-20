@@ -103,5 +103,8 @@ def test_flow_run():
 
 
 def test_type_check():
-    fl = flow()
-    fl.typecheck()
+    loader = str_loader_node()
+    dumper = print_dump()
+    dumper.set_upstream_node('batch', loader)
+    flow = Flow(dump_nodes=[dumper, ])
+    flow.typecheck()
