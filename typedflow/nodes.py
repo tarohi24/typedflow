@@ -38,6 +38,9 @@ class ProviderNode(Generic[K]):
         self.cache_table: CacheTable[int, Batch[K]]\
             = CacheTable[int, Batch[K]](life=0)
 
+    def get_return_type(self) -> Type[K]:
+        ...
+
     def get_or_produce_batch(self,
                              batch_id: int) -> Batch[K]:
         ...
@@ -120,12 +123,16 @@ class ConsumerNode(Generic[T]):
 @dataclass
 class LoaderNode(ProviderNode[K]):
     orig: Iterable[K]
+    return_type: Type[K]  # currently necessary
     batch_size: int = 16
     itr: Iterator[K] = field(init=False)
     
     def __post_init__(self):
         ProviderNode.__post_init__(self)
         self.itr: Iterator[K] = iter(self.orig)
+
+    def get_return_type(self) -> Type[K]:
+        return self.return_type
 
     def load(self) -> Generator[Batch[K], None, None]:
         lst: List[K] = []
@@ -205,6 +212,9 @@ class TaskNode(ProviderNode[K], ConsumerNode[T]):
                 for key, typ
                 in get_type_hints(self.func).items()
                 if key != 'return'}
+
+    def get_return_type(self) -> Type[K]:
+        return get_arg_types(self.func)['return']
 
 @dataclass
 class DumpNode(ConsumerNode[T]):
