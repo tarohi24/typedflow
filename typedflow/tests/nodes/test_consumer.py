@@ -12,7 +12,6 @@ class IntStr(TypedDict):
     i: int
 
 
-@pytest.fixture
 def str_loader_node() -> LoaderNode[str]:
     def load_str() -> Generator[str, None, None]:
         lst: List[str] = ['hi', 'hello', 'konnichiwa']
@@ -23,7 +22,6 @@ def str_loader_node() -> LoaderNode[str]:
     return node
 
 
-@pytest.fixture
 def int_loader_node() -> LoaderNode[int]:
     def load_int() -> Generator[int, None, None]:
         lst: int = [1, 2, 3]
@@ -34,7 +32,6 @@ def int_loader_node() -> LoaderNode[int]:
     return node
 
 
-@pytest.fixture
 def str_dump_node() -> DumpNode[str]:
     def printer(s: str) -> None:
         print(s)
@@ -50,27 +47,29 @@ def int_str_dump_node() -> DumpNode[IntStr]:
     return node
 
 
-def test_init(str_dump_node):
-    node = str_dump_node
+def test_init():
+    node = str_dump_node()
     assert len(node.precs) == 0
 
 
-def test_set_upstream(str_dump_node, str_loader_node, int_loader_node):
-    node = str_dump_node
-    node.set_upstream_node('loader', str_loader_node)
+def test_set_upstream():
+    sl = str_loader_node()
+    il = int_loader_node()
+    node = str_dump_node()
+    node.set_upstream_node('loader', sl)
     with pytest.raises(AssertionError):
-        node.set_upstream_node('loader', str_loader_node)
+        node.set_upstream_node('loader', sl)
     assert len(node.precs) == 1
-    assert str_loader_node._succ_count == 1
+    assert sl._succ_count == 1
 
-    node.set_upstream_node('ld', int_loader_node)
+    node.set_upstream_node('ld', il)
     assert len(node.precs) == 2
-    assert int_loader_node._succ_count == 1
-    assert str_loader_node._succ_count == 1
+    assert il._succ_count == 1
+    assert sl._succ_count == 1
 
 
-def test_batch_len_and_id(str_dump_node):
-    node = str_dump_node
+def test_batch_len_and_id():
+    node = str_dump_node()
     batches = [
         Batch(batch_id=0, data=[1, 2]),
         Batch(batch_id=0, data=[2, 3]),
@@ -83,7 +82,7 @@ def test_batch_len_and_id(str_dump_node):
     assert node._get_batch_len(batches) == 0
 
 
-def test_merging(int_str_dump_node, int_loader_node, str_loader_node):
+def test_merging(int_str_dump_node):
     node = int_str_dump_node
     batch_str = Batch(batch_id=0, data=['hi', 'hello'])
     batch_int = Batch(batch_id=0, data=[1, 2])
@@ -93,28 +92,29 @@ def test_merging(int_str_dump_node, int_loader_node, str_loader_node):
     assert batch.data[1] == {'s': 'hello', 'i': 2}
 
 
-def test_accept_without_merging(str_dump_node, str_loader_node):
-    node = str_dump_node
-    node.set_upstream_node('s', str_loader_node)
+def test_accept_without_merging():
+    node = str_dump_node()
+    sl = str_loader_node()
+    node.set_upstream_node('s', sl)
     asyncio.run(node.accept(batch_id=0))
 
 
-def test_accept_with_merging(int_str_dump_node, int_loader_node, str_loader_node):
+def test_accept_with_merging(int_str_dump_node):
     # single batch
     node = int_str_dump_node
-    node.set_upstream_node('i', int_loader_node)
-    node.set_upstream_node('s', str_loader_node)
+    node.set_upstream_node('i', int_loader_node())
+    node.set_upstream_node('s', str_loader_node())
     batch = asyncio.run(node.accept(batch_id=0))
     assert batch.data[0] == {'i': 1, 's': 'hi'}
     assert batch.data[1] == {'i': 2, 's': 'hello'}
 
 
-def test_accept_with_different_levels(int_str_dump_node, int_loader_node, str_loader_node, capsys):
+def test_accept_with_different_levels(int_str_dump_node, capsys):
     def ignore_first(s: str) -> str:
         return s[1:]
     ss_node: TaskNode[str, int] = TaskNode(func=ignore_first)
-    ss_node.set_upstream_node('s', str_loader_node)
-    int_str_dump_node.set_upstream_node('i', int_loader_node)
+    ss_node.set_upstream_node('s', str_loader_node())
+    int_str_dump_node.set_upstream_node('i', int_loader_node())
     int_str_dump_node.set_upstream_node('s', ss_node)
     asyncio.run(int_str_dump_node.run_and_dump(batch_id=0))
     out, _ = capsys.readouterr()
@@ -127,3 +127,20 @@ def test_get_arg_types():
 
     cons: DumpNode[str] = DumpNode(func=print_str)
     assert cons.get_arg_type() == str
+
+
+def test_lt_operation():
+    sl = str_loader_node()
+    sd = str_dump_node()
+    (sd < sl)  # do nothing
+    (sd < sl)('loader')
+    assert sd.precs['loader'] == sl
+    with pytest.raises(AssertionError):
+        (sl < sd)
+
+
+def test_gt_operation():
+    sl = str_loader_node()
+    sd = str_dump_node()
+    (sl > sd)('loader')
+    assert sd.precs['loader'] == sl

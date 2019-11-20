@@ -20,7 +20,6 @@ class Flow:
         not implemented because Python Generic doesn't offer
         any ways to access to the actual type
         """
-        pass
 
     async def run(self,
                   validate: bool = True) -> None:

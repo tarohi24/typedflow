@@ -1,3 +1,4 @@
+autoflake
 bump2version
 flake8
 mypy

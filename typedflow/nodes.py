@@ -127,6 +127,15 @@ class ConsumerNode(Generic[T]):
             merged_batch: Batch[T] = self._merge_batches(materials=materials)
             return merged_batch
 
+    def __lt__(self,
+               another: ProviderNode[T]) -> Callable[[str], None]:
+        assert isinstance(another, ProviderNode), 'In a < b, b should be an ProviderNode instance'
+        func: Callable[[str], None] = lambda s: self.set_upstream_node(s, another)
+        return func
+
+    def __gt__(self, another):
+        raise AssertionError('ConsumerNode does not support > operation')
+
 
 @dataclass
 class LoaderNode(ProviderNode[K]):
@@ -177,6 +186,14 @@ class LoaderNode(ProviderNode[K]):
                 raise EndOfBatch()
             self.cache_table.set(key=batch_id, value=batch)
             return self.cache_table.get(batch_id)
+
+    def __gt__(self,
+               another: ConsumerNode[K]) -> Callable[[str], None]:
+        assert isinstance(another, ConsumerNode)
+        return another < self
+
+    def __lt__(self, another):
+        raise AssertionError('ConsumerNode does not support > operation')
 
 
 @dataclass(init=False)
