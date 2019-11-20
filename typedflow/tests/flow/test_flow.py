@@ -102,7 +102,8 @@ def flow():
 
 def test_flow_run():
     fl = flow()
-    asyncio.run(fl.run())
+    asyncio.run(fl.async_run())
+    fl.run()
 
 
 def test_type_check():
