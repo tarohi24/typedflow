@@ -221,6 +221,7 @@ class TaskNode(ConsumerNode[T], ProviderNode[K]):
         products: List[K] = []
         for item in batch.data:
             if isinstance(item, FaultItem):
+                products.append(FaultItem())
                 continue
             try:
                 products.append(self.func(item))
