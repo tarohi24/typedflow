@@ -12,7 +12,6 @@ class IntStr(TypedDict):
     i: int
 
 
-
 @pytest.fixture
 def str_loader_node() -> LoaderNode[str]:
     def load_str() -> Generator[str, None, None]:
@@ -127,4 +126,4 @@ def test_get_arg_types():
         pass
 
     cons: DumpNode[str] = DumpNode(func=print_str)
-    assert cons.get_arg_type () == str
+    assert cons.get_arg_type() == str

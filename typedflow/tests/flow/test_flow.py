@@ -7,9 +7,8 @@ str --/                    ---> save_to_file
 import asyncio
 from pathlib import Path
 import tempfile
-from typing import List, TypedDict, Tuple
+from typing import List, TypedDict
 
-from typedflow.batch import Batch
 from typedflow.flow import Flow
 from typedflow.nodes import DumpNode, LoaderNode, TaskNode
 
@@ -94,7 +93,7 @@ def flow():
     sd = save_dump()
     sd.set_upstream_node('p', pl)
     sd.set_upstream_node('s', mt)
-    
+
     pd = print_dump()
     pd.set_upstream_node('s', mt)
     flow = Flow(dump_nodes=[pd, sd])

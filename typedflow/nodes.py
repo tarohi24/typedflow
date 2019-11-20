@@ -5,9 +5,12 @@ from typing import (
     get_args,
     get_type_hints,
     Any,
+    Callable,
     Dict,
     Iterator,
+    Iterable,
     Generic,
+    Generator,
     List,
     Type,
     TypedDict,
@@ -218,6 +221,7 @@ class TaskNode(ConsumerNode[T], ProviderNode[K]):
             arg: Batch[T] = await self.accept(batch_id=batch_id)
             product: Batch[K] = self.process(arg)
             return product
+
 
 @dataclass
 class DumpNode(ConsumerNode[T]):
