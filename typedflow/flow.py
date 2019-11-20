@@ -50,5 +50,5 @@ class Flow:
                 break
             args: Dict[str, Type] = node.get_arg_types()
             prov_return_types: Dict[str, Type] = {name: node.get_return_type()
-                                                  for name, node in ups_dict}
+                                                  for name, node in ups_dict.items()}
             assert all(args[key] == prov_return_types[key] for key in args.keys())

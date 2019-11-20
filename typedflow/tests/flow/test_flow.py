@@ -21,13 +21,13 @@ class IntStr(TypedDict):
 
 def str_loader_node() -> LoaderNode[str]:
     lst: List[str] = ['hi', 'hello', 'konnichiwa']
-    node: LoaderNode[str] = LoaderNode(orig=lst, batch_size=2)
+    node: LoaderNode[str] = LoaderNode(orig=lst, batch_size=2, return_type=str)
     return node
 
 
 def int_loader_node() -> LoaderNode[int]:
     lst = list(range(3))
-    node: LoaderNode[int] = LoaderNode(orig=lst)
+    node: LoaderNode[int] = LoaderNode(orig=lst, batch_size=2, return_type=int)
     return node
 
 
@@ -38,7 +38,7 @@ def middle_task() -> TaskNode[IntStr, str]:
 
     sl = str_loader_node()
     il = int_loader_node()
-    node = TaskNode(func=count_chars, arg_type=IntStr)
+    node = TaskNode(func=count_chars)
     assert node.cache_table.life == 0
     node.set_upstream_node('s', sl)
     node.set_upstream_node('i', il)
@@ -47,12 +47,12 @@ def middle_task() -> TaskNode[IntStr, str]:
 
 def path_load_node() -> Path:
 
-    def gen_tmp_file():
+    def gen_tmp_file() -> Path:
         while True:
             yield Path(tempfile.mkstemp()[1])
 
     gen = gen_tmp_file()
-    node = LoaderNode(orig=gen, batch_size=2)
+    node = LoaderNode(orig=gen, batch_size=2, return_type=Path)
     return node
 
 
@@ -62,7 +62,7 @@ def print_dump() -> DumpNode[str]:
             return
 
     mt = middle_task()
-    node: DumpNode[str] = DumpNode(arg_type=str, func=printer)
+    node: DumpNode[str] = DumpNode(func=printer)
     node.set_upstream_node('_', mt)
     return node
 
@@ -81,7 +81,7 @@ def save_dump() -> DumpNode[str]:
     pl = path_load_node()
     assert mt._succ_count == 0
     assert mt.cache_table.life == 0
-    node: DumpNode[str] = DumpNode(arg_type=PathedStr, func=saver)
+    node: DumpNode[str] = DumpNode(func=saver)
     node.set_upstream_node('s', mt)
     node.set_upstream_node('p', pl)
     assert pl.cache_table.life == 1

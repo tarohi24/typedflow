@@ -9,7 +9,9 @@ from typedflow.nodes import TaskNode, LoaderNode
 @pytest.fixture
 def str_loader_node() -> LoaderNode[str]:
     lst: List[str] = ['hi', 'hello', 'konnichiwa']
-    node: LoaderNode[str] = LoaderNode(orig=lst, batch_size=2)
+    node: LoaderNode[str] = LoaderNode(orig=lst,
+                                       batch_size=2,
+                                       return_type=str)
     return node
 
 
@@ -17,7 +19,7 @@ def str_loader_node() -> LoaderNode[str]:
 def tasknode(str_loader_node) -> TaskNode[str, int]:
     def count_chars(s: str) -> int:
         return len(s)
-    node: TaskNode[str, int] = TaskNode(func=count_chars, arg_type=str)
+    node: TaskNode[str, int] = TaskNode(func=count_chars)
     node.set_upstream_node('s', str_loader_node)
     return node
 

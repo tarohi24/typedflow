@@ -9,7 +9,7 @@ from typedflow.nodes import LoaderNode
 @pytest.fixture
 def loader_node() -> LoaderNode[str]:
     lst: List[str] = ['hi', 'hello', 'konnichiwa']
-    node: LoaderNode[str] = LoaderNode(orig=lst, batch_size=2)
+    node: LoaderNode[str] = LoaderNode(orig=lst, batch_size=2, return_type=str)
     return node
 
 
@@ -21,7 +21,7 @@ class SampleArg(TypedDict):
 def test_load():
     gen: Generator[int, None, None] = (SampleArg(s='hi', i=i) for i in range(3))
     # first batch
-    loader: LoaderNode[int] = LoaderNode(orig=gen, batch_size=2)
+    loader: LoaderNode[int] = LoaderNode(orig=gen, batch_size=2, return_type=int)
     load = loader.load()
     batch_1 = next(load)
     assert batch_1.batch_id == 0

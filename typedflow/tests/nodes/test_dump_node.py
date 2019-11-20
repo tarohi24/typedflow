@@ -21,7 +21,7 @@ def dump_node():
         for arg in batch.data:
             print(str(arg))
 
-    node = DumpNode(arg_type=Batch[str], func=func)
+    node = DumpNode(func=func)
     return node
 
 

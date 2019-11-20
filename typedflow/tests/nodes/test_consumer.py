@@ -15,14 +15,18 @@ class IntStr(TypedDict):
 @pytest.fixture
 def str_loader_node() -> LoaderNode[str]:
     lst: List[str] = ['hi', 'hello', 'konnichiwa']
-    node: LoaderNode[str] = LoaderNode(orig=lst, batch_size=2)
+    node: LoaderNode[str] = LoaderNode(orig=lst,
+                                       return_type=str,
+                                       batch_size=2)
     return node
 
 
 @pytest.fixture
 def int_loader_node() -> LoaderNode[int]:
     lst: int = [1, 2, 3]
-    node: LoaderNode[int] = LoaderNode(orig=lst, batch_size=2)
+    node: LoaderNode[int] = LoaderNode(orig=lst,
+                                       return_type=int,
+                                       batch_size=2)
     return node
 
 
@@ -30,7 +34,7 @@ def int_loader_node() -> LoaderNode[int]:
 def str_dump_node() -> DumpNode[str]:
     def printer(batch: Batch[str]) -> None:
         print(batch.data)
-    node: DumpNode[str] = DumpNode(func=printer, arg_type=str)
+    node: DumpNode[str] = DumpNode(func=printer)
     return node
 
 
@@ -39,7 +43,7 @@ def int_str_dump_node() -> DumpNode[IntStr]:
     def printer(batch: Batch[IntStr]) -> None:
         for item in batch.data:
             print(f'{str(item["i"])} {item["s"]}')
-    node: DumpNode[IntStr] = DumpNode(arg_type=IntStr, func=printer)
+    node: DumpNode[IntStr] = DumpNode(func=printer)
     return node
 
 
@@ -51,7 +55,6 @@ def test_init_with_argtype():
 
 def test_init(str_dump_node):
     node = str_dump_node
-    assert node.arg_type == str
     assert len(node.precs) == 0
 
 
@@ -112,7 +115,7 @@ def test_accept_with_merging(int_str_dump_node, int_loader_node, str_loader_node
 def test_accept_with_different_levels(int_str_dump_node, int_loader_node, str_loader_node, capsys):
     def ignore_first(s: str) -> str:
         return s[1:]
-    ss_node: TaskNode[str, int] = TaskNode(func=ignore_first, arg_type=str)
+    ss_node: TaskNode[str, int] = TaskNode(func=ignore_first)
     ss_node.set_upstream_node('s', str_loader_node)
     int_str_dump_node.set_upstream_node('i', int_loader_node)
     int_str_dump_node.set_upstream_node('s', ss_node)
@@ -125,7 +128,10 @@ def test_get_arg_types():
     def print_str(s: str) -> None:
         pass
 
-    cons: DumpNode[str] = DumpNode(arg_type=str, func=print_str)
-    assert cons.get_arg_types() == {'s': str}
-    tasknode: TaskNode = TaskNode(arg_type=int, func=print_str) # dummy
+    def print_batch(b: Batch[str]) -> None:
+        pass
+
+    cons: DumpNode[str] = DumpNode(func=print_batch)
+    assert cons.get_arg_types() == {'b': str}
+    tasknode: TaskNode = TaskNode(func=print_str)
     assert tasknode.get_arg_types() == {'s': str}

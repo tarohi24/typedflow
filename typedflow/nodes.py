@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import logging
 from typing import (
+    get_args,
     get_type_hints,
     Dict,
     Iterator,
@@ -57,7 +58,6 @@ class ConsumerNode(Generic[T]):
     Note: this is not defined as a dataclass due to the inheritance problem
     see: https://stackoverflow.com/questions/51575931/class-inheritance-in-python-3-7-dataclasses  # noqa
     """
-    arg_type: Type[T]  # must be same as T
     precs: Dict[str, ProviderNode[T]] = field(init=False)
 
     def __post_init__(self):
@@ -174,10 +174,9 @@ class TaskNode(ProviderNode[K], ConsumerNode[T]):
     func: Callable[[T], K]
 
     def __init__(self,
-                 func: Callable[[T], K],
-                 arg_type: Type[T]):
+                 func: Callable[[T], K]):
         self.func: Callable[[T], K] = func
-        ConsumerNode.__init__(self, arg_type)
+        ConsumerNode.__init__(self)
         ConsumerNode.__post_init__(self)
         ProviderNode.__init__(self)
         ProviderNode.__post_init__(self)
@@ -214,7 +213,7 @@ class TaskNode(ProviderNode[K], ConsumerNode[T]):
                 if key != 'return'}
 
     def get_return_type(self) -> Type[K]:
-        return get_arg_types(self.func)['return']
+        return get_type_hints(self.func)['return']
 
 @dataclass
 class DumpNode(ConsumerNode[T]):
@@ -233,10 +232,12 @@ class DumpNode(ConsumerNode[T]):
             return
 
     def get_arg_types(self) -> Dict[str, Type]:
-        return {key: typ
-                for key, typ
-                in get_type_hints(self.func).items()
-                if key != 'return'}
-
+        args: Dict[str, Type[T]] = {key: get_args(batch_typ)[0]
+                                    for key, batch_typ
+                                    in get_type_hints(self.func).items()
+                                    if key != 'return'}
+        assert len(args) == 1
+        return args
+        
     def dump(self, batch: Batch[T]) -> None:
         self.func(batch)
