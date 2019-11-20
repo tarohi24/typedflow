@@ -2,7 +2,7 @@ import asyncio
 from typing import List, Union
 
 from typedflow.exceptions import FaultItem
-from typedflow.nodes import TaskNode, LoaderNode
+from typedflow.nodes import TaskNode, LoaderNode, DumpNode
 
 
 def lst() -> List[str]:
@@ -21,6 +21,10 @@ def str_loader_node() -> LoaderNode[str]:
     node: LoaderNode[str] = LoaderNode(func=lst,
                                        batch_size=2)
     return node
+
+
+def dump_int(i: int) -> None:
+    i + 1   # do nothing
 
 
 def tasknode() -> TaskNode[str, int]:
@@ -51,3 +55,11 @@ def test_fault_item():
     assert batch.data == [2, 5]
     batch = asyncio.run(node.get_or_produce_batch(batch_id=1))  # noqa
     assert batch.data[1] == len('konnichiwa')
+
+
+def test_lt_and_gt():
+    loader: LoaderNode[str] = LoaderNode(func=lst_with_fi, batch_size=2)
+    node = tasknode()
+    dumper: DumpNode[int] = DumpNode(func=dump_int)
+    (node < loader)('orig')
+    (node > dumper)('conv')

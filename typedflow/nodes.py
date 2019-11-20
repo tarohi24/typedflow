@@ -55,6 +55,21 @@ class ProviderNode(Generic[K]):
         self._succ_count += 1
         self.cache_table.life += 1
 
+    def gt_op(self,
+              another: ConsumerNode[K]) -> Callable[[str], None]:
+        """
+        This is not implemented inside __gt__ due to the inhetitance problems
+        """
+        assert isinstance(another, ConsumerNode)
+        return another < self
+
+    def __gt__(self,
+               another: ConsumerNode[K]) -> Callable[[str], None]:
+        return self.gt_op(another=another)
+
+    def __lt__(self, another):
+        raise AssertionError('ConsumerNode does not support > operation')
+
 
 @dataclass
 class ConsumerNode(Generic[T]):
@@ -127,11 +142,15 @@ class ConsumerNode(Generic[T]):
             merged_batch: Batch[T] = self._merge_batches(materials=materials)
             return merged_batch
 
-    def __lt__(self,
-               another: ProviderNode[T]) -> Callable[[str], None]:
+    def lt_op(self,
+              another: ProviderNode[T]) -> Callable[[str], None]:
         assert isinstance(another, ProviderNode), 'In a < b, b should be an ProviderNode instance'
         func: Callable[[str], None] = lambda s: self.set_upstream_node(s, another)
         return func
+
+    def __lt__(self,
+               another: ProviderNode[T]) -> Callable[[str], None]:
+        return self.lt_op(another=another)
 
     def __gt__(self, another):
         raise AssertionError('ConsumerNode does not support > operation')
@@ -187,14 +206,6 @@ class LoaderNode(ProviderNode[K]):
             self.cache_table.set(key=batch_id, value=batch)
             return self.cache_table.get(batch_id)
 
-    def __gt__(self,
-               another: ConsumerNode[K]) -> Callable[[str], None]:
-        assert isinstance(another, ConsumerNode)
-        return another < self
-
-    def __lt__(self, another):
-        raise AssertionError('ConsumerNode does not support > operation')
-
 
 @dataclass(init=False)
 class TaskNode(ConsumerNode[T], ProviderNode[K]):
@@ -239,6 +250,18 @@ class TaskNode(ConsumerNode[T], ProviderNode[K]):
             arg: Batch[T] = await self.accept(batch_id=batch_id)
             product: Batch[K] = self.process(arg)
             return product
+
+    def __lt__(self,
+               another: ProviderNode[T]) -> Callable[[str], None]:
+        """
+        Do not implement using super() (it has problems
+        when a class inherits from multiple super classes)
+        """
+        return self.lt_op(another=another)
+
+    def __gt__(self,
+               another: ConsumerNode[K]) -> Callable[[str], None]:
+        return self.gt_op(another=another)
 
 
 @dataclass
