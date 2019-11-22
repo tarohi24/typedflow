@@ -20,8 +20,7 @@ from typing import (
 from typedflow.batch import Batch
 from typedflow.counted_cache import CacheTable
 from typedflow.exceptions import EndOfBatch, FaultItem
-from typedflow.types import T, K
-
+from typedflow.types import K
 
 __all__ = ['LoaderNode', 'TaskNode', 'DumpNode']
 
@@ -56,7 +55,7 @@ class ProviderNode(Generic[K]):
         self.cache_table.life += 1
 
     def gt_op(self,
-              another: ConsumerNode[K]) -> Callable[[str], None]:
+              another: ConsumerNode) -> Callable[[str], None]:
         """
         This is not implemented inside __gt__ due to the inhetitance problems
         """
@@ -64,7 +63,7 @@ class ProviderNode(Generic[K]):
         return another < self
 
     def __gt__(self,
-               another: ConsumerNode[K]) -> Callable[[str], None]:
+               another: ConsumerNode) -> Callable[[str], None]:
         return self.gt_op(another=another)
 
     def __lt__(self, another):
@@ -72,32 +71,31 @@ class ProviderNode(Generic[K]):
 
 
 @dataclass
-class ConsumerNode(Generic[T]):
+class ConsumerNode:
     """
     TaskNode or DumpNode
     Note: this is not defined as a dataclass due to the inheritance problem
     see: https://stackoverflow.com/questions/51575931/class-inheritance-in-python-3-7-dataclasses  # noqa
     """
-    func: Callable[[T], Any]
-    precs: Dict[str, ProviderNode[T]] = field(init=False)
+    func: Callable[..., Any]
+    precs: Dict[str, ProviderNode] = field(init=False)
 
     def __post_init__(self):
-        self.precs: Dict[str, ProviderNode[T]] = dict()
+        self.precs: Dict[str, ProviderNode] = dict()
 
     def set_upstream_node(self,
                           key: str,
-                          node: ProviderNode[T]) -> None:
+                          node: ProviderNode) -> None:
         assert key not in self.precs
         self.precs[key] = node
         node.add_succ()
 
-    def get_arg_type(self) -> Type[T]:
+    def get_arg_types(self) -> Dict[str, Type]:
         args: Dict[str, Type] = {key: typ
                                  for key, typ
                                  in get_type_hints(self.func).items()
                                  if key != 'return'}
-        assert len(args) == 1
-        return next(iter(args.values()))
+        return args
 
     @staticmethod
     def _get_batch_id(batches: List[Batch]) -> int:
@@ -111,14 +109,14 @@ class ConsumerNode(Generic[T]):
         return batch_len
 
     def _merge_batches(self,
-                       materials: Dict[str, Batch]) -> Batch[TD]:
+                       materials: Dict[str, Batch]) -> Batch[Dict[str, Any]]:
         """
-        TD is the same class as self.arg_type
+        return kwargs (without any type checks)
         """
         mat_batches: List[Batch] = list(materials.values())
         batch_len: int = self._get_batch_len(mat_batches)
         keys: List[str] = list(materials.keys())
-        data: List[TD] = list()
+        data: List[Dict[str, Any]] = list()
         for i in range(batch_len):
             data.append({key: materials[key].data[i] for key in keys})
         batch_id: int = self._get_batch_id(mat_batches)
@@ -126,30 +124,25 @@ class ConsumerNode(Generic[T]):
         return batch
 
     async def accept(self,
-                     batch_id: int) -> Batch[T]:
+                     batch_id: int) -> Batch[Dict[str, Any]]:
         """
         merge all the arguments items into an instance of T (=arg_type)
         """
-        if len(self.precs) == 1:
-            prec: ProviderNode[T] = next(iter(self.precs.values()))
-            product: Batch[T] = await prec.get_or_produce_batch(batch_id=batch_id)
-            return product
-        else:
-            materials: Dict[str, Batch] = {
-                key: await prec.get_or_produce_batch(batch_id=batch_id)
-                for key, prec in self.precs.items()
-            }
-            merged_batch: Batch[T] = self._merge_batches(materials=materials)
-            return merged_batch
+        materials: Dict[str, Batch] = {
+            key: await prec.get_or_produce_batch(batch_id=batch_id)
+            for key, prec in self.precs.items()
+        }
+        merged_batch: Batch[Dict[str, Any]] = self._merge_batches(materials=materials)
+        return merged_batch
 
     def lt_op(self,
-              another: ProviderNode[T]) -> Callable[[str], None]:
+              another: ProviderNode) -> Callable[[str], None]:
         assert isinstance(another, ProviderNode), 'In a < b, b should be an ProviderNode instance'
         func: Callable[[str], None] = lambda s: self.set_upstream_node(s, another)
         return func
 
     def __lt__(self,
-               another: ProviderNode[T]) -> Callable[[str], None]:
+               another: ProviderNode) -> Callable[[str], None]:
         return self.lt_op(another=another)
 
     def __gt__(self, another):
@@ -174,7 +167,10 @@ class LoaderNode(ProviderNode[K]):
 
     def get_return_type(self) -> Type[K]:
         typ: Type[Iterable[K]] = get_type_hints(self.func)['return']
-        return get_args(typ)[0]
+        try:
+            return get_args(typ)[0]
+        except:
+            raise AssertionError()
 
     def load(self) -> Generator[Batch[K], None, None]:
         lst: List[K] = []
@@ -208,14 +204,14 @@ class LoaderNode(ProviderNode[K]):
 
 
 @dataclass(init=False)
-class TaskNode(ConsumerNode[T], ProviderNode[K]):
+class TaskNode(ConsumerNode, ProviderNode[K]):
     """
     This is not a dataclass because it dataclass doesn't work
     if it is inherited from multiple super classes
     """
 
     def __init__(self,
-                 func: Callable[[T], K]):
+                 func: Callable[..., K]):
         ConsumerNode.__init__(self, func=func)
         ConsumerNode.__post_init__(self)
         ProviderNode.__init__(self, func=func)
@@ -226,16 +222,16 @@ class TaskNode(ConsumerNode[T], ProviderNode[K]):
         return typ
 
     def process(self,
-                batch: Batch[T]) -> Batch[K]:
+                batch: Batch[Union[Dict[str, Any]], FaultItem]) -> Batch[K]:
         if len(batch.data) == 0:
             raise EndOfBatch()
-        products: List[K] = []
+        products: List[Union[FaultItem, Dict[str, Any]]] = []
         for item in batch.data:
             if isinstance(item, FaultItem):
                 products.append(FaultItem())
                 continue
             try:
-                products.append(self.func(item))
+                products.append(self.func(**item))
             except Exception as e:
                 logger.warn(repr(e))
                 products.append(FaultItem())
@@ -247,12 +243,12 @@ class TaskNode(ConsumerNode[T], ProviderNode[K]):
         try:
             return self.cache_table.get(batch_id)
         except KeyError:
-            arg: Batch[T] = await self.accept(batch_id=batch_id)
+            arg: Batch[Dict[str, Any]] = await self.accept(batch_id=batch_id)
             product: Batch[K] = self.process(arg)
             return product
 
     def __lt__(self,
-               another: ProviderNode[T]) -> Callable[[str], None]:
+               another: ProviderNode) -> Callable[[str], None]:
         """
         Do not implement using super() (it has problems
         when a class inherits from multiple super classes)
@@ -260,26 +256,28 @@ class TaskNode(ConsumerNode[T], ProviderNode[K]):
         return self.lt_op(another=another)
 
     def __gt__(self,
-               another: ConsumerNode[K]) -> Callable[[str], None]:
+               another: ConsumerNode) -> Callable[[str], None]:
         return self.gt_op(another=another)
 
 
 @dataclass
-class DumpNode(ConsumerNode[T]):
+class DumpNode(ConsumerNode):
     finished: bool = False
 
     async def run_and_dump(self,
                            batch_id: int) -> None:
         if not self.finished:
             try:
-                batch: Batch[T] = await self.accept(batch_id=batch_id)
+                batch: Batch[Dict[str, Any]] = await self.accept(batch_id=batch_id)
                 self.dump(batch)
             except EndOfBatch:
                 self.finished: bool = True
         else:
             return
 
-    def dump(self, batch: Batch[T]) -> None:
+    def dump(self, batch: Batch) -> None:
         for item in batch.data:
-            if not isinstance(item, FaultItem):
-                self.func(item)
+            if isinstance(item, FaultItem):
+                continue
+            else:
+                self.func(**item)

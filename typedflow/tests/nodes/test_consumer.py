@@ -32,18 +32,17 @@ def int_loader_node() -> LoaderNode[int]:
     return node
 
 
-def str_dump_node() -> DumpNode[str]:
+def str_dump_node() -> DumpNode:
     def printer(s: str) -> None:
         print(s)
-    node: DumpNode[str] = DumpNode(func=printer)
+    node: DumpNode = DumpNode(func=printer)
     return node
 
 
-@pytest.fixture
-def int_str_dump_node() -> DumpNode[IntStr]:
-    def printer(item: IntStr) -> None:
-        print(f'{str(item["i"])} {item["s"]}')
-    node: DumpNode[IntStr] = DumpNode(func=printer)
+def int_str_dump_node() -> DumpNode:
+    def printer(i: int, s: str) -> None:
+        print(f'{str(i)} {s}')
+    node: DumpNode = DumpNode(func=printer)
     return node
 
 
@@ -82,8 +81,8 @@ def test_batch_len_and_id():
     assert node._get_batch_len(batches) == 0
 
 
-def test_merging(int_str_dump_node):
-    node = int_str_dump_node
+def test_merging():
+    node = int_str_dump_node()
     batch_str = Batch(batch_id=0, data=['hi', 'hello'])
     batch_int = Batch(batch_id=0, data=[1, 2])
     materials = {'s': batch_str, 'i': batch_int}
@@ -99,24 +98,26 @@ def test_accept_without_merging():
     asyncio.run(node.accept(batch_id=0))
 
 
-def test_accept_with_merging(int_str_dump_node):
+def test_accept_with_merging():
     # single batch
-    node = int_str_dump_node
-    node.set_upstream_node('i', int_loader_node())
-    node.set_upstream_node('s', str_loader_node())
+    node = int_str_dump_node()
+    (node < int_loader_node())('i')
+    (node < str_loader_node())('s')
     batch = asyncio.run(node.accept(batch_id=0))
     assert batch.data[0] == {'i': 1, 's': 'hi'}
     assert batch.data[1] == {'i': 2, 's': 'hello'}
 
 
-def test_accept_with_different_levels(int_str_dump_node, capsys):
+def test_accept_with_different_levels(capsys):
     def ignore_first(s: str) -> str:
         return s[1:]
-    ss_node: TaskNode[str, int] = TaskNode(func=ignore_first)
-    ss_node.set_upstream_node('s', str_loader_node())
-    int_str_dump_node.set_upstream_node('i', int_loader_node())
-    int_str_dump_node.set_upstream_node('s', ss_node)
-    asyncio.run(int_str_dump_node.run_and_dump(batch_id=0))
+    ss_node: TaskNode[int] = TaskNode(func=ignore_first)
+    (ss_node < str_loader_node())('s')
+    
+    dumper = int_str_dump_node()
+    (dumper < int_loader_node())('i')
+    (dumper < ss_node)('s')
+    asyncio.run(dumper.run_and_dump(batch_id=0))
     out, _ = capsys.readouterr()
     assert out == '1 i\n2 ello\n'
 
@@ -126,7 +127,7 @@ def test_get_arg_types():
         pass
 
     cons: DumpNode[str] = DumpNode(func=print_str)
-    assert cons.get_arg_type() == str
+    assert cons.get_arg_types() == {'s': str}
 
 
 def test_lt_operation():

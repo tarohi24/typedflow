@@ -27,8 +27,8 @@ def dump_int(i: int) -> None:
     i + 1   # do nothing
 
 
-def tasknode() -> TaskNode[str, int]:
-    node: TaskNode[str, int] = TaskNode(func=count_chars)
+def tasknode() -> TaskNode[int]:
+    node: TaskNode[int] = TaskNode(func=count_chars)
     node.set_upstream_node('s', str_loader_node())
     return node
 
@@ -49,8 +49,8 @@ def test_provide():
 
 def test_fault_item():
     loader: LoaderNode[str] = LoaderNode(func=lst_with_fi, batch_size=2)
-    node: TaskNode[str, int] = TaskNode(func=count_chars)
-    (node < loader)('loader')
+    node: TaskNode[int] = TaskNode(func=count_chars)
+    (node < loader)('s')
     batch = asyncio.run(node.get_or_produce_batch(batch_id=0))
     assert batch.data == [2, 5]
     batch = asyncio.run(node.get_or_produce_batch(batch_id=1))  # noqa
@@ -60,6 +60,6 @@ def test_fault_item():
 def test_lt_and_gt():
     loader: LoaderNode[str] = LoaderNode(func=lst_with_fi, batch_size=2)
     node = tasknode()
-    dumper: DumpNode[int] = DumpNode(func=dump_int)
+    dumper: DumpNode = DumpNode(func=dump_int)
     (node < loader)('orig')
     (node > dumper)('conv')

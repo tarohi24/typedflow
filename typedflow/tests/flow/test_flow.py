@@ -7,7 +7,7 @@ str --/                    ---> save_to_file
 import asyncio
 from pathlib import Path
 import tempfile
-from typing import List, TypedDict
+from typing import Generator, List, TypedDict
 
 from typedflow.flow import Flow
 from typedflow.nodes import DumpNode, LoaderNode, TaskNode
@@ -29,24 +29,20 @@ def int_loader_node() -> LoaderNode[int]:
     return node
 
 
-class IntStr(TypedDict):
-    i: int
-    s: str
 
+def middle_task() -> TaskNode[str]:
 
-def middle_task() -> TaskNode[IntStr, str]:
-
-    def count_chars(si: IntStr) -> str:
-        return f'{si["s"]} {str(si["i"])}'
+    def count_chars(s: str, i: int) -> str:
+        return f'{s} {str(i)}'
 
     node = TaskNode(func=count_chars)
     assert node.cache_table.life == 0
     return node
 
 
-def path_load_node() -> Path:
+def path_load_node() -> LoaderNode[Path]:
 
-    def gen_tmp_file() -> Path:
+    def gen_tmp_file() -> Generator[Path, None, None]:
         while True:
             yield Path(tempfile.mkstemp()[1])
 
@@ -55,24 +51,19 @@ def path_load_node() -> Path:
     return node
 
 
-def print_dump() -> DumpNode[str]:
+def print_dump() -> DumpNode:
     def printer(s: str) -> None:
         print(s)
 
-    node: DumpNode[str] = DumpNode(func=printer)
+    node: DumpNode = DumpNode(func=printer)
     return node
 
 
-class PathStr(TypedDict):
-    p: Path
-    s: str
-
-
-def save_dump() -> DumpNode[str]:
-    def saver(ps: PathStr) -> None:
-        with open(ps['p'], 'w') as fout:
-            fout.write(ps['s'])
-    node: DumpNode[str] = DumpNode(func=saver)
+def save_dump() -> DumpNode:
+    def saver(p: Path, s: str) -> None:
+        with open(p, 'w') as fout:
+            fout.write(s)
+    node: DumpNode = DumpNode(func=saver)
     return node
 
 
@@ -82,8 +73,8 @@ def flow():
     mt = middle_task()
     assert mt._succ_count == 0
     assert mt.cache_table.life == 0
-    mt.set_upstream_node('s', sl)
-    mt.set_upstream_node('i', il)
+    (mt < sl)('s')
+    (mt < il)('i')
     assert sl._succ_count == 1
     assert sl.cache_table.life == 1
     assert il._succ_count == 1
@@ -91,12 +82,13 @@ def flow():
 
     pl = path_load_node()
     sd = save_dump()
-    sd.set_upstream_node('p', pl)
-    sd.set_upstream_node('s', mt)
+    (sd < pl)('p')
+    (sd < mt)('s')
 
     pd = print_dump()
-    pd.set_upstream_node('s', mt)
+    (pd < mt)('s')
     flow = Flow(dump_nodes=[pd, sd])
+    flow.typecheck()
     return flow
 
 
@@ -112,3 +104,24 @@ def test_type_check():
     dumper.set_upstream_node('s', loader)
     flow = Flow(dump_nodes=[dumper, ])
     flow.typecheck()
+
+
+def test_incoming_multiple_node(capsys):
+    def op(s: str, i: int) -> int:
+        return len(s) + i
+
+    def dump_int(i: int) -> int:
+        print(str(i))
+
+    str_loader = str_loader_node()
+    int_loader = int_loader_node()
+    op_node = TaskNode(op)
+    (op_node < str_loader)('s')
+    (op_node < int_loader)('i')
+    dumper = DumpNode(dump_int)
+    (dumper < op_node)('i')
+    flow = Flow(dump_nodes=[dumper, ])
+    flow.typecheck()
+    flow.run()
+    captured = capsys.readouterr()
+    assert captured.out == '2\n6\n12\n'

@@ -46,21 +46,15 @@ class Flow:
         # initially check all dumps
         for node in self.dump_nodes:
             cands.append(
-                (node, {name: ups_node for name, ups_node in node.precs.items()}))
+                (node, {name: ups_node.get_return_type()
+                        for name, ups_node in node.precs.items()}))
         while True:
             try:
                 node, ups_dict = cands.pop()
             except IndexError:
                 break
-            arg_type: Type = node.get_arg_type()
-            if len(node.precs) == 1:
-                assert len(ups_dict) == 1
-                ups_node: ProviderNode = next(iter(ups_dict.values()))
-                assert arg_type == ups_node.get_return_type()
-            elif len(node.precs) > 1:
-                annotations: Dict[str, Type] = arg_type.__annotations__
-                assert len(ups_dict) == len(annotations)
-                for key in arg_type.keys():
-                    ups_dict[key].get_return_type() == [key]
-            else:
-                raise AssertionError()
+            arg_types: Type = node.get_arg_types()
+            assert len(ups_dict) == len(arg_types)
+            for key in arg_types.keys():
+            
+                ups_dict[key] == [key]
