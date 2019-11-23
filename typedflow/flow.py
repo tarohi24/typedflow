@@ -56,5 +56,4 @@ class Flow:
             arg_types: Type = node.get_arg_types()
             assert len(ups_dict) == len(arg_types)
             for key in arg_types.keys():
-            
                 ups_dict[key] == [key]

@@ -12,6 +12,7 @@ from typing import (
     Generic,
     Generator,
     List,
+    Union,
     Type,
     TypedDict,
     TypeVar
@@ -169,8 +170,8 @@ class LoaderNode(ProviderNode[K]):
         typ: Type[Iterable[K]] = get_type_hints(self.func)['return']
         try:
             return get_args(typ)[0]
-        except:
-            raise AssertionError()
+        except IndexError:
+            raise AssertionError(f'function {self.func.__name__} may not return iterbale')
 
     def load(self) -> Generator[Batch[K], None, None]:
         lst: List[K] = []
@@ -278,6 +279,8 @@ class DumpNode(ConsumerNode):
     def dump(self, batch: Batch) -> None:
         for item in batch.data:
             if isinstance(item, FaultItem):
+                continue
+            elif any([isinstance(val, FaultItem) for val in item.values()]):
                 continue
             else:
                 self.func(**item)

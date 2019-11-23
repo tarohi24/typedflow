@@ -113,7 +113,7 @@ def test_accept_with_different_levels(capsys):
         return s[1:]
     ss_node: TaskNode[int] = TaskNode(func=ignore_first)
     (ss_node < str_loader_node())('s')
-    
+
     dumper = int_str_dump_node()
     (dumper < int_loader_node())('i')
     (dumper < ss_node)('s')

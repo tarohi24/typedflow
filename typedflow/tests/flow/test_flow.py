@@ -7,7 +7,7 @@ str --/                    ---> save_to_file
 import asyncio
 from pathlib import Path
 import tempfile
-from typing import Generator, List, TypedDict
+from typing import Generator, List
 
 from typedflow.flow import Flow
 from typedflow.nodes import DumpNode, LoaderNode, TaskNode
@@ -27,7 +27,6 @@ def int_loader_node() -> LoaderNode[int]:
     node: LoaderNode[int] = LoaderNode(func=lst,
                                        batch_size=2)
     return node
-
 
 
 def middle_task() -> TaskNode[str]:
