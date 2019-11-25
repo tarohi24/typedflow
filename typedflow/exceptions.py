@@ -10,4 +10,11 @@ class EndOfBatch(Exception):
 
 
 class FaultItem:
-    pass
+    def __hash__(self):
+        return hash('faultitem')
+
+    def __eq__(self, another):
+        if isinstance(another, FaultItem):
+            return True
+        else:
+            return False

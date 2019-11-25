@@ -63,3 +63,47 @@ def test_lt_and_gt():
     dumper: DumpNode = DumpNode(func=dump_int)
     (node < loader)('orig')
     (node > dumper)('conv')
+
+
+
+def test_with_fault_item():
+
+    def load() -> List[int]:
+        return list(range(10))
+
+    def a_task(a: int) -> int:
+        if a % 3 != 0:
+            return a + 1
+        else:
+            raise Exception()
+
+    def b_task(b: int) -> int:
+        if b % 4 != 0:
+            return b
+        else:
+            raise Exception()
+
+    def c_task(a: int, b: int) -> str:
+        return str(a + b)
+
+    loader: LoaderNode[int] = LoaderNode(func=load, batch_size=5)
+    a: TaskNode[int] = TaskNode(func=a_task)
+    b: TaskNode[int] = TaskNode(func=b_task)
+    c: TaskNode[int] = TaskNode(func=c_task)
+    (a < loader)('a')
+    (b < loader)('b')
+    (c < a)('a')
+    (c < b)('b')
+    assert asyncio.run(a.get_or_produce_batch(batch_id=0)).data == [FaultItem(), 2, 3, FaultItem(), 5]
+    assert asyncio.run(b.get_or_produce_batch(batch_id=0)).data == [FaultItem(), 1, 2, 3, FaultItem()]
+    loader: LoaderNode[int] = LoaderNode(func=load, batch_size=5)
+    a: TaskNode[int] = TaskNode(func=a_task)
+    b: TaskNode[int] = TaskNode(func=b_task)
+    c: TaskNode[int] = TaskNode(func=c_task)
+    (a < loader)('a')
+    (b < loader)('b')
+    (c < a)('a')
+    (c < b)('b')
+    res = asyncio.run(c.get_or_produce_batch(batch_id=0))
+    assert len(res.data) == 5
+    assert res.data == [FaultItem(), '3', '5', FaultItem(), FaultItem()]

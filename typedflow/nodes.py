@@ -107,6 +107,7 @@ class ConsumerNode:
     @staticmethod
     def _get_batch_len(batches: List[Batch]) -> int:
         batch_len: int = min([len(batch.data) for batch in batches])
+        assert all([len(batch.data) == batch_len for batch in batches]), 'Different length'
         return batch_len
 
     def _merge_batches(self,
@@ -133,6 +134,7 @@ class ConsumerNode:
             key: await prec.get_or_produce_batch(batch_id=batch_id)
             for key, prec in self.precs.items()
         }
+        # check lengths of batches
         merged_batch: Batch[Dict[str, Any]] = self._merge_batches(materials=materials)
         return merged_batch
 
