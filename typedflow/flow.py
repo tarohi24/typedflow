@@ -57,3 +57,8 @@ class Flow:
             assert len(ups_dict) == len(arg_types)
             for key in arg_types.keys():
                 ups_dict[key] == [key]
+            for new_node in node.precs.values():
+                if isinstance(new_node, ConsumerNode):
+                    cands.append(
+                        (new_node, {name: ups_node.get_return_type()
+                                for name, ups_node in new_node.precs.items()}))
