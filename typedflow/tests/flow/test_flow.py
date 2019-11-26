@@ -4,7 +4,6 @@ int ----->  len(str) + int ---> print
 str --/                    ---> save_to_file
                       path --/
 """
-import asyncio
 from pathlib import Path
 import tempfile
 from typing import Generator, List
@@ -96,7 +95,6 @@ def flow():
 def test_flow_run():
     fl = flow()
     fl.typecheck()
-    asyncio.run(fl.async_run())
     fl.run()
 
 

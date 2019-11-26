@@ -4,6 +4,7 @@ import logging
 from typing import (
     get_args,
     get_type_hints,
+    overload,
     Any,
     Callable,
     Dict,
@@ -127,13 +128,13 @@ class ConsumerNode:
         batch = Batch(batch_id=batch_id, data=data)
         return batch
 
-    async def accept(self,
+    def accept(self,
                      batch_id: int) -> Batch[Dict[str, Any]]:
         """
         merge all the arguments items into an instance of T (=arg_type)
         """
         materials: Dict[str, Batch] = {
-            key: await prec.get_or_produce_batch(batch_id=batch_id)
+            key: prec.get_or_produce_batch(batch_id=batch_id)
             for key, prec in self.precs.items()
         }
         # check lengths of batches
@@ -195,7 +196,7 @@ class LoaderNode(ProviderNode[K]):
             batch_id += 1
             lst: List[K] = []  # noqa
 
-    async def get_or_produce_batch(self,
+    def get_or_produce_batch(self,
                                    batch_id: int) -> Batch[K]:
         try:
             return self.cache_table.get(batch_id)
@@ -243,12 +244,12 @@ class TaskNode(ConsumerNode, ProviderNode[K]):
         return Batch[K](batch_id=batch.batch_id,
                         data=products)
 
-    async def get_or_produce_batch(self,
-                                   batch_id: int) -> Batch[K]:
+    def get_or_produce_batch(self,
+                             batch_id: int) -> Batch[K]:
         try:
             return self.cache_table.get(batch_id)
         except KeyError:
-            arg: Batch[Dict[str, Any]] = await self.accept(batch_id=batch_id)
+            arg: Batch[Dict[str, Any]] = self.accept(batch_id=batch_id)
             product: Batch[K] = self.process(arg)
             return product
 
@@ -269,11 +270,11 @@ class TaskNode(ConsumerNode, ProviderNode[K]):
 class DumpNode(ConsumerNode):
     finished: bool = False
 
-    async def run_and_dump(self,
+    def run_and_dump(self,
                            batch_id: int) -> None:
         if not self.finished:
             try:
-                batch: Batch[Dict[str, Any]] = await self.accept(batch_id=batch_id)
+                batch: Batch[Dict[str, Any]] = self.accept(batch_id=batch_id)
                 self.dump(batch)
             except EndOfBatch:
                 self.finished: bool = True

@@ -1,4 +1,3 @@
-import asyncio
 from typing import List, Union
 
 from typedflow.exceptions import FaultItem
@@ -41,9 +40,9 @@ def test_init():
 
 def test_provide():
     node = tasknode()
-    batch = asyncio.run(node.get_or_produce_batch(batch_id=0))
+    batch = node.get_or_produce_batch(batch_id=0)
     assert batch.data == [2, 5]
-    batch = asyncio.run(node.get_or_produce_batch(batch_id=1))  # noqa
+    batch = node.get_or_produce_batch(batch_id=1)  # noqa
     assert batch.data == [len('konnichiwa')]
 
 
@@ -51,9 +50,9 @@ def test_fault_item():
     loader: LoaderNode[str] = LoaderNode(func=lst_with_fi, batch_size=2)
     node: TaskNode[int] = TaskNode(func=count_chars)
     (node < loader)('s')
-    batch = asyncio.run(node.get_or_produce_batch(batch_id=0))
+    batch = node.get_or_produce_batch(batch_id=0)
     assert batch.data == [2, 5]
-    batch = asyncio.run(node.get_or_produce_batch(batch_id=1))  # noqa
+    batch = node.get_or_produce_batch(batch_id=1)  # noqa
     assert batch.data[1] == len('konnichiwa')
 
 
@@ -93,8 +92,8 @@ def test_with_fault_item():
     (b < loader)('b')
     (c < a)('a')
     (c < b)('b')
-    assert asyncio.run(a.get_or_produce_batch(batch_id=0)).data == [FaultItem(), 2, 3, FaultItem(), 5]
-    assert asyncio.run(b.get_or_produce_batch(batch_id=0)).data == [FaultItem(), 1, 2, 3, FaultItem()]
+    assert a.get_or_produce_batch(batch_id=0).data == [FaultItem(), 2, 3, FaultItem(), 5]
+    assert b.get_or_produce_batch(batch_id=0).data == [FaultItem(), 1, 2, 3, FaultItem()]
     loader: LoaderNode[int] = LoaderNode(func=load, batch_size=5)
     a: TaskNode[int] = TaskNode(func=a_task)
     b: TaskNode[int] = TaskNode(func=b_task)
@@ -103,6 +102,6 @@ def test_with_fault_item():
     (b < loader)('b')
     (c < a)('a')
     (c < b)('b')
-    res = asyncio.run(c.get_or_produce_batch(batch_id=0))
+    res = c.get_or_produce_batch(batch_id=0)
     assert len(res.data) == 5
     assert res.data == [FaultItem(), '3', '5', FaultItem(), FaultItem()]

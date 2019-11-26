@@ -1,4 +1,3 @@
-import asyncio
 from typing import Generator, List, TypedDict
 
 import pytest
@@ -94,7 +93,7 @@ def test_accept_without_merging():
     node = str_dump_node()
     sl = str_loader_node()
     node.set_upstream_node('s', sl)
-    asyncio.run(node.accept(batch_id=0))
+    node.accept(batch_id=0)
 
 
 def test_accept_with_merging():
@@ -102,7 +101,7 @@ def test_accept_with_merging():
     node = int_str_dump_node()
     (node < int_loader_node())('i')
     (node < str_loader_node())('s')
-    batch = asyncio.run(node.accept(batch_id=0))
+    batch = node.accept(batch_id=0)
     assert batch.data[0] == {'i': 1, 's': 'hi'}
     assert batch.data[1] == {'i': 2, 's': 'hello'}
 
@@ -116,7 +115,7 @@ def test_accept_with_different_levels(capsys):
     dumper = int_str_dump_node()
     (dumper < int_loader_node())('i')
     (dumper < ss_node)('s')
-    asyncio.run(dumper.run_and_dump(batch_id=0))
+    dumper.run_and_dump(batch_id=0)
     out, _ = capsys.readouterr()
     assert out == '1 i\n2 ello\n'
 
@@ -171,7 +170,7 @@ def test_batch_failrure(capsys):
     (task < b_loader)('b')
     dumper = str_dump_node()
     (dumper < task)('s')
-    asyncio.run(dumper.run_and_dump(batch_id=0))
-    asyncio.run(dumper.run_and_dump(batch_id=1))
+    dumper.run_and_dump(batch_id=0)
+    dumper.run_and_dump(batch_id=1)
     captured = capsys.readouterr()
     assert captured.out == 'ohoh\n2\n4\n10\n14\n'

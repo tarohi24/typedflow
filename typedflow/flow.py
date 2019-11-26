@@ -1,5 +1,4 @@
 from __future__ import annotations
-import asyncio
 from dataclasses import dataclass
 import logging
 from typing import Deque, Dict, List, Tuple, Type, Union
@@ -45,20 +44,16 @@ class Flow:
                 cands.extend([n for n in node.precs.values()
                               if n not in visited])
 
-    async def async_run(self,
-                        validate: bool = True) -> None:
+    def run(self,
+            validate: bool = True) -> None:
         if validate:
             self.validate()
         batch_id: int = 0
         while True:
             for node in self.dump_nodes:
-                await node.run_and_dump(batch_id=batch_id)
+                node.run_and_dump(batch_id=batch_id)
             if all([node.finished for node in self.dump_nodes]):
                 return
-
-    def run(self,
-            validate: bool = True) -> None:
-        asyncio.run(self.async_run())
 
     def typecheck(self) -> None:
         """
