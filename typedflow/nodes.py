@@ -129,14 +129,13 @@ class ConsumerNode:
         return batch
 
     def accept(self,
-                     batch_id: int) -> Batch[Dict[str, Any]]:
+               batch_id: int) -> Batch[Dict[str, Any]]:
         """
         merge all the arguments items into an instance of T (=arg_type)
         """
-        materials: Dict[str, Batch] = {
-            key: prec.get_or_produce_batch(batch_id=batch_id)
-            for key, prec in self.precs.items()
-        }
+        materials: Dict[str, Batch] = dict()
+        for key, prec in self.precs.items():
+            materials[key] = prec.get_or_produce_batch(batch_id=batch_id)
         # check lengths of batches
         merged_batch: Batch[Dict[str, Any]] = self._merge_batches(materials=materials)
         return merged_batch
@@ -197,7 +196,11 @@ class LoaderNode(ProviderNode[K]):
             lst: List[K] = []  # noqa
 
     def get_or_produce_batch(self,
-                                   batch_id: int) -> Batch[K]:
+                             batch_id: int) -> Batch[K]:
+        """
+        CAUTION: for unit testing of this method, we have to set
+        cache_table.life = 1 in advance (defualt 0)
+        """
         try:
             return self.cache_table.get(batch_id)
         except KeyError:
@@ -251,7 +254,8 @@ class TaskNode(ConsumerNode, ProviderNode[K]):
         except KeyError:
             arg: Batch[Dict[str, Any]] = self.accept(batch_id=batch_id)
             product: Batch[K] = self.process(arg)
-            return product
+            self.cache_table.set(key=batch_id, value=product)
+            return self.cache_table.get(batch_id)
 
     def __lt__(self,
                another: ProviderNode) -> Callable[[str], None]:

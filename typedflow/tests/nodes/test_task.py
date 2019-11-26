@@ -40,6 +40,7 @@ def test_init():
 
 def test_provide():
     node = tasknode()
+    node.add_succ()
     batch = node.get_or_produce_batch(batch_id=0)
     assert batch.data == [2, 5]
     batch = node.get_or_produce_batch(batch_id=1)  # noqa
@@ -50,6 +51,7 @@ def test_fault_item():
     loader: LoaderNode[str] = LoaderNode(func=lst_with_fi, batch_size=2)
     node: TaskNode[int] = TaskNode(func=count_chars)
     (node < loader)('s')
+    node.add_succ()
     batch = node.get_or_produce_batch(batch_id=0)
     assert batch.data == [2, 5]
     batch = node.get_or_produce_batch(batch_id=1)  # noqa
@@ -102,6 +104,10 @@ def test_with_fault_item():
     (b < loader)('b')
     (c < a)('a')
     (c < b)('b')
+    assert loader._succ_count == 2
+    assert a.cache_table.life == 1
+    assert b.cache_table.life == 1
+    c.add_succ()
     res = c.get_or_produce_batch(batch_id=0)
     assert len(res.data) == 5
     assert res.data == [FaultItem(), '3', '5', FaultItem(), FaultItem()]
