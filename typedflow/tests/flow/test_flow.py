@@ -9,6 +9,8 @@ from pathlib import Path
 import tempfile
 from typing import Generator, List
 
+import pytest
+
 from typedflow.flow import Flow
 from typedflow.nodes import DumpNode, LoaderNode, TaskNode
 
@@ -98,12 +100,34 @@ def test_flow_run():
     fl.run()
 
 
-def test_type_check():
+def test_typecheck_success():
     loader = str_loader_node()
     dumper = print_dump()
     dumper.set_upstream_node('s', loader)
     flow = Flow(dump_nodes=[dumper, ])
     flow.typecheck()
+
+
+def test_typecheck_failure():
+    loader = str_loader_node()
+    dumper = print_dump()
+    # misdirection
+    with pytest.raises(AssertionError):
+        (loader < dumper)('s')
+    # misspell
+    (dumper < loader)('ss')
+    flow = Flow([dumper, ])
+    with pytest.raises(AssertionError):
+        flow.typecheck()
+    # invalid types
+    loader = int_loader_node()
+    dumper = print_dump()
+    (dumper < loader)('s')
+    flow = Flow([dumper, ])
+    with pytest.raises(AssertionError):
+        flow.typecheck()
+    
+    
 
 
 def test_incoming_multiple_node(capsys):

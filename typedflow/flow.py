@@ -77,9 +77,12 @@ class Flow:
             except IndexError:
                 break
             arg_types: Type = node.get_arg_types()
-            assert len(ups_dict) == len(arg_types), f'Invalid arguments. Expected: {arg_types}, Actual: {ups_dict}'
-            for key in arg_types.keys():
-                ups_dict[key] == [key]
+            keys: Set[str] = set(arg_types.keys())
+            assert keys == set(ups_dict.keys()), f'Invalid arguments. Expected: {arg_types}, Actual: {ups_dict}'
+            for key in keys:
+                if ups_dict[key] != arg_types[key]:
+                    raise AssertionError(f'Invalid type for arg {key}: Expected {arg_types[key]}, Actual {ups_dict[key]}')
+                    
             for new_node in node.precs.values():
                 if isinstance(new_node, ConsumerNode):
                     cands.append(
