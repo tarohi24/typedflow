@@ -65,7 +65,6 @@ def test_lt_and_gt():
     (node > dumper)('conv')
 
 
-
 def test_with_fault_item():
 
     def load() -> List[int]:

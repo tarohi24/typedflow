@@ -42,7 +42,7 @@ def middle_task() -> TaskNode[str]:
 def path_load_node() -> LoaderNode[Path]:
 
     def gen_tmp_file() -> Generator[Path, None, None]:
-        while True:
+        for _ in range(3):
             yield Path(tempfile.mkstemp()[1])
 
     node = LoaderNode(func=gen_tmp_file,
