@@ -2,14 +2,15 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 import logging
-from typing import List, Deque, Dict, Tuple, Type
+from typing import List, Deque, Dict, Tuple, Type, Union, Set
 
-from typedflow.nodes import ConsumerNode, ProviderNode, DumpNode
+from typedflow.nodes import ConsumerNode, ProviderNode, DumpNode, LoaderNode
 
 __all__ = ['Flow']
 
 
 logger = logging.getLogger(__file__)
+Node = Union[ProviderNode, ConsumerNode]
 
 
 @dataclass
@@ -21,6 +22,28 @@ class Flow:
         not implemented because Python Generic doesn't offer
         any ways to access to the actual type
         """
+
+    def get_loader_nodes(self) -> List[LoaderNode]:
+        loaders: List[LoaderNode] = []
+        visited: List[Node] = []
+        cands: Deque[Node] = Deque()
+        cands.extend(self.dump_nodes)
+        while True:
+            try:
+                node: Node = cands.pop()
+            except IndexError:
+                return loaders
+            if node in visited:
+                continue
+            else:
+                visited.append(node)
+
+            if isinstance(node, LoaderNode):
+                if node not in loaders:
+                    loaders.append(node)
+            else:
+                cands.extend([n for n in node.precs.values()
+                              if n not in visited])
 
     async def async_run(self,
                         validate: bool = True) -> None:
@@ -62,3 +85,7 @@ class Flow:
                     cands.append(
                         (new_node, {name: ups_node.get_return_type()
                                 for name, ups_node in new_node.precs.items()}))
+
+        # check batch_size
+        loaders: List[LoaderNode] = self.get_loader_nodes()
+        assert len({ld.batch_size for ld in loaders}) == 1
