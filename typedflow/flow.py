@@ -77,7 +77,7 @@ class Flow:
             except IndexError:
                 break
             arg_types: Type = node.get_arg_types()
-            assert len(ups_dict) == len(arg_types)
+            assert len(ups_dict) == len(arg_types), f'Invalid arguments. Expected: {arg_types}, Actual: {ups_dict}'
             for key in arg_types.keys():
                 ups_dict[key] == [key]
             for new_node in node.precs.values():
