@@ -124,8 +124,6 @@ def test_typecheck_failure():
     flow = Flow([dumper, ])
     with pytest.raises(AssertionError):
         flow.typecheck()
-    
-    
 
 
 def test_incoming_multiple_node(capsys):

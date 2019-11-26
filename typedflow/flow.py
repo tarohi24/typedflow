@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 import logging
-from typing import Deque, Dict, List, Tuple, Type, Union
+from typing import Deque, Dict, List, Tuple, Type, Union, Set
 
 from typedflow.nodes import ConsumerNode, ProviderNode, DumpNode, LoaderNode
 
@@ -77,7 +77,6 @@ class Flow:
             for key in keys:
                 if ups_dict[key] != arg_types[key]:
                     raise AssertionError(f'Invalid type for arg {key}: Expected {arg_types[key]}, Actual {ups_dict[key]}')
-                    
             for new_node in node.precs.values():
                 if isinstance(new_node, ConsumerNode):
                     cands.append(

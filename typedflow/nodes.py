@@ -4,7 +4,6 @@ import logging
 from typing import (
     get_args,
     get_type_hints,
-    overload,
     Any,
     Callable,
     Dict,
@@ -275,7 +274,7 @@ class DumpNode(ConsumerNode):
     finished: bool = False
 
     def run_and_dump(self,
-                           batch_id: int) -> None:
+                     batch_id: int) -> None:
         if not self.finished:
             try:
                 batch: Batch[Dict[str, Any]] = self.accept(batch_id=batch_id)

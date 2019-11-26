@@ -85,7 +85,7 @@ def test_loader_with_multiple_targets():
         return s
 
     def merge_str(a: str, b: str, c: str) -> str:
-        return s
+        return a + b + c
 
     loader: LoaderNode[str] = LoaderNode(func=load)
     first_task: TaskNode[str] = TaskNode(func=task_func_1)
