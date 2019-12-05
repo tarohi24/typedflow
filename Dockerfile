@@ -8,3 +8,8 @@ ADD requirements.txt /workplace/
 RUN pip install -r requirements.txt
 ADD requirements_dev.txt /workplace/
 RUN pip install -r requirements_dev.txt
+
+ADD setup.py /workplace/
+ADD typedflow /workplace/typeflow
+RUN pip install --editable .
+VOLUME /workplace
