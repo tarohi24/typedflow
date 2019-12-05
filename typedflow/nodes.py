@@ -17,6 +17,7 @@ from typing import (
     TypedDict,
     TypeVar
 )
+import traceback
 
 from typedflow.batch import Batch
 from typedflow.counted_cache import CacheTable
@@ -242,6 +243,7 @@ class TaskNode(ConsumerNode, ProviderNode[K]):
                 products.append(self.func(**item))
             except Exception as e:
                 logger.warn(repr(e))
+                traceback.print_tb(e.__traceback__)
                 products.append(FaultItem())
         return Batch[K](batch_id=batch.batch_id,
                         data=products)
