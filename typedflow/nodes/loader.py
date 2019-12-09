@@ -4,6 +4,7 @@ import logging
 from typing import (
     get_args,
     get_type_hints,
+    Callable,
     Iterator,
     Iterable,
     Generator,
@@ -18,7 +19,7 @@ from typedflow.types import K
 from . import ProviderNode
 
 
-__all__ = ['LoaderNode', ]
+__all__ = ['LoaderNode', 'loader']
 logger = logging.getLogger(__file__)
 
 
@@ -78,3 +79,7 @@ class LoaderNode(ProviderNode[K]):
                 raise EndOfBatch()
             self.cache_table.set(key=batch_id, value=batch)
             return self.cache_table.get(batch_id)
+
+
+def loader(func: Callable):
+    return LoaderNode(func=func)
