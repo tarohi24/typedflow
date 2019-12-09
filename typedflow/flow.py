@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 import logging
-from typing import Deque, Dict, List, Tuple, Type, Union, Set
+from typing import Deque, Dict, List, Tuple, Type, Union, Set, Generic, get_args, get_origin, Optional
 
 from typedflow.nodes import ConsumerNode, ProviderNode, DumpNode, LoaderNode
 
@@ -55,6 +55,44 @@ class Flow:
             if all([node.finished for node in self.dump_nodes]):
                 return
 
+    def is_inherited(self, sub: Type, sup: Type) -> bool:
+        """
+        This is not a static method in order to be used recursively.
+
+        >>> is_inherited(int, object)
+        True
+
+        >>> is_inherited(int, int)
+        True
+
+        >>> is_inherited(List[int], Iterable[int])
+        True
+
+        >>> is_inherited(Iterable[int], List[int])
+        False
+        """
+        if sub == sup:
+            return True
+        _sub_orig: Optional[Type] = get_origin(sub)
+        if _sub_orig is None:  # i.e. sub_orig is primitive
+            return False
+        sub_orig: Type = _sub_orig
+        _sup_orig: Optional[Type] = get_origin(sup)
+        if _sup_orig is None:
+            return False
+        sup_orig: Type = _sup_orig
+
+        if issubclass(sub_orig, Generic) and issubclass(sup_orig, Generic):
+            # Compare original type
+            if not self.is_inherited(sup_orig, sub_orig):
+                return False
+
+            # compare arguments
+            for sub_arg, sup_arg in zip(get_args(sub), get_args(sup)):
+                if not self.is_inherited(sub_arg, sup_arg):
+                    return False
+        return True
+
     def typecheck(self) -> None:
         """
         Check type consistency with inputs/outputs.
@@ -75,7 +113,7 @@ class Flow:
             keys: Set[str] = set(arg_types.keys())
             assert keys == set(ups_dict.keys()), f'Invalid arguments. Expected: {arg_types}, Actual: {ups_dict}'
             for key in keys:
-                if ups_dict[key] != arg_types[key]:
+                if not self.is_inherited(ups_dict[key], arg_types[key]):
                     raise AssertionError(f'Invalid type for arg {key}: Expected {arg_types[key]}, Actual {ups_dict[key]}')
             for new_node in node.precs.values():
                 if isinstance(new_node, ConsumerNode):

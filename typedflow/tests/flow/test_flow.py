@@ -1,12 +1,11 @@
 """
 Integrated test
 int ----->  len(str) + int ---> print
-str --/                    ---> save_to_file
-                      path --/
+str --/                    ---> save_to_file path --/
 """
 from pathlib import Path
 import tempfile
-from typing import Generator, List
+from typing import Generator, List, Iterable
 
 import pytest
 
@@ -145,3 +144,22 @@ def test_incoming_multiple_node(capsys):
     flow.run()
     captured = capsys.readouterr()
     assert captured.out == '2\n6\n12\n'
+
+
+def test_arg_inheritance():
+    def load() -> List[int]:
+        return []
+
+    def task(a: int) -> List[int]:
+        pass
+
+    def dump(a: Iterable[int]) -> None:
+        pass
+
+    node_load: LoaderNode = LoaderNode(func=load)
+    node_task: TaskNode = TaskNode(func=task)
+    node_dump: DumpNode = DumpNode(func=dump)
+    (node_task < node_load)('a')
+    (node_dump < node_task)('a')
+    flow = Flow(dump_nodes=[node_dump, ])
+    flow.typecheck()
