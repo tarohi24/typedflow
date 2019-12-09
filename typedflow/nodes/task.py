@@ -20,12 +20,12 @@ from typedflow.types import K
 from . import ConsumerNode, ProviderNode
 
 
-__all__ = ['TaskNode', ]
+__all__ = ['TaskNode', 'task']
 logger = logging.getLogger(__file__)
 
 
 @dataclass(init=False)
-class TaskNode(ConsumerNode, ProviderNode[K]):
+class TaskNode(ConsumerNode, ProviderNode[K], Callable):
     """
     This is not a dataclass because it dataclass doesn't work
     if it is inherited from multiple super classes
@@ -81,3 +81,13 @@ class TaskNode(ConsumerNode, ProviderNode[K]):
     def __gt__(self,
                another: ConsumerNode) -> Callable[[str], None]:
         return self.gt_op(another=another)
+
+    def __call__(self, *args, **kwargs):
+        """
+        Behave as if this were a function
+        """
+        return self.func(*args, **kwargs)
+
+
+def task(func: Callable):
+    return TaskNode(func=func)
