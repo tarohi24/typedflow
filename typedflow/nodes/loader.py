@@ -1,4 +1,5 @@
 from __future__ import annotations
+from functools import wraps
 from dataclasses import dataclass, field
 import logging
 from typing import (
@@ -19,7 +20,7 @@ from typedflow.types import K
 from . import ProviderNode
 
 
-__all__ = ['LoaderNode', 'loader']
+__all__ = ['LoaderNode', ]
 logger = logging.getLogger(__file__)
 
 
@@ -79,10 +80,3 @@ class LoaderNode(ProviderNode[K]):
                 raise EndOfBatch()
             self.cache_table.set(key=batch_id, value=batch)
             return self.cache_table.get(batch_id)
-
-
-def loader(batch_size: int = 16):
-    def inner(func: Callable):
-        return LoaderNode(func=func,
-                          batch_size=batch_size)
-    return inner
