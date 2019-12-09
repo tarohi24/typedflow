@@ -1,7 +1,7 @@
 from typing import List, Union
 
 from typedflow.exceptions import FaultItem
-from typedflow.nodes import TaskNode, LoaderNode, DumpNode
+from typedflow.nodes import TaskNode, LoaderNode, DumpNode, task
 
 
 def lst() -> List[str]:
@@ -111,3 +111,17 @@ def test_with_fault_item():
     res = c.get_or_produce_batch(batch_id=0)
     assert len(res.data) == 5
     assert res.data == [FaultItem(), '3', '5', FaultItem(), FaultItem()]
+
+
+def test_task_deco():
+
+    @task
+    def a_task(a: int) -> int:
+        if a % 3 != 0:
+            return a + 1
+        else:
+            raise Exception()
+
+    assert isinstance(a_task, TaskNode)
+    # assert is callable
+    assert a_task(a=10) == 11
