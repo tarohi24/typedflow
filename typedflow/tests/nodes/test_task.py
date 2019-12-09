@@ -123,3 +123,5 @@ def test_task_deco():
             raise Exception()
 
     assert isinstance(a_task, TaskNode)
+    # assert is callable
+    assert a_task(a=10) == 11
