@@ -81,5 +81,8 @@ class LoaderNode(ProviderNode[K]):
             return self.cache_table.get(batch_id)
 
 
-def loader(func: Callable):
-    return LoaderNode(func=func)
+def loader(batch_size: int = 16):
+    def inner(func: Callable):
+        return LoaderNode(func=func,
+                          batch_size=batch_size)
+    return inner

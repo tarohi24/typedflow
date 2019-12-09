@@ -4,7 +4,7 @@ from typedflow.nodes import task, loader, dumper
 from typedflow.flow import Flow
 
 
-@loader
+@loader(batch_size=1)
 def load() -> List[int]:
     return list(range(10))
 
