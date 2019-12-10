@@ -113,7 +113,8 @@ class ConsumerNode:
         None
         """
         assert len(self.precs) == 0, 'Some arguments have been already set'
-        self.precs: Dict[str, ProviderNode] = args
+        for name, prec in args.items():
+            self.set_upstream_node(name, prec)
         return self
 
 
