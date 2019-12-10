@@ -209,3 +209,4 @@ def test_declare_inputs_when_definition_with_multiple_args():
     node_dump = DumpNode(dump)({'a': node_task})
     flow = Flow([node_dump, ])
     flow.typecheck()
+    assert node_task.cache_table.life == 1
