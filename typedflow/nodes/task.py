@@ -20,7 +20,7 @@ from typedflow.types import K
 from . import ConsumerNode, ProviderNode
 
 
-__all__ = ['TaskNode', 'task']
+__all__ = ['TaskNode', ]
 logger = logging.getLogger(__file__)
 
 
@@ -87,7 +87,3 @@ class TaskNode(ConsumerNode, ProviderNode[K], Callable):
         Behave as if this were a function
         """
         return self.func(*args, **kwargs)
-
-
-def task(func: Callable):
-    return TaskNode(func=func)

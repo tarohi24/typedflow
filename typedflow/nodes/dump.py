@@ -3,7 +3,6 @@ from dataclasses import dataclass
 import logging
 from typing import (
     Any,
-    Callable,
     Dict,
 )
 
@@ -13,7 +12,7 @@ from typedflow.exceptions import EndOfBatch, FaultItem
 from . import ConsumerNode
 
 
-__all__ = ['DumpNode', 'dumper']
+__all__ = ['DumpNode', ]
 logger = logging.getLogger(__file__)
 
 
@@ -40,7 +39,3 @@ class DumpNode(ConsumerNode):
                 continue
             else:
                 self.func(**item)
-
-
-def dumper(func: Callable):
-    return DumpNode(func=func)
