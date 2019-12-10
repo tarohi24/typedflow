@@ -174,7 +174,7 @@ def test_declare_inputs_when_definition():
 
     def dump(a: Iterable[int]) -> None:
         pass
-    
+
     node_load = LoaderNode(load)
     node_task = TaskNode(task)({'a': node_load})
     node_dump = DumpNode(dump)({'a': node_task})
@@ -195,7 +195,7 @@ def test_declare_inputs_when_definition_with_multiple_args():
 
     def dump(a: Iterable[int]) -> None:
         pass
-    
+
     node_load = LoaderNode(load_int)
     node_task = TaskNode(task)({'a': node_load})
     node_dump = DumpNode(dump)({'a': node_task})
@@ -209,4 +209,3 @@ def test_declare_inputs_when_definition_with_multiple_args():
     node_dump = DumpNode(dump)({'a': node_task})
     flow = Flow([node_dump, ])
     flow.typecheck()
-    
