@@ -163,3 +163,50 @@ def test_arg_inheritance():
     (node_dump < node_task)('a')
     flow = Flow(dump_nodes=[node_dump, ])
     flow.typecheck()
+
+
+def test_declare_inputs_when_definition():
+    def load() -> List[int]:
+        return []
+
+    def task(a: int) -> List[int]:
+        pass
+
+    def dump(a: Iterable[int]) -> None:
+        pass
+    
+    node_load = LoaderNode(load)
+    node_task = TaskNode(task)({'a': node_load})
+    node_dump = DumpNode(dump)({'a': node_task})
+    flow = Flow([node_dump, ])
+    flow.typecheck()
+
+
+def test_declare_inputs_when_definition_with_multiple_args():
+    def load_int() -> List[int]:
+        return []
+
+    def load_str() -> Generator[str, None, None]:
+        for i in range(3):
+            yield 'a'
+
+    def task(a: int, b: str) -> List[int]:
+        pass
+
+    def dump(a: Iterable[int]) -> None:
+        pass
+    
+    node_load = LoaderNode(load_int)
+    node_task = TaskNode(task)({'a': node_load})
+    node_dump = DumpNode(dump)({'a': node_task})
+    flow = Flow([node_dump, ])
+    with pytest.raises(AssertionError):
+        flow.typecheck()
+
+    node_load_int = LoaderNode(load_int)
+    node_load_str = LoaderNode(load_str)
+    node_task = TaskNode(task)({'a': node_load_int, 'b': node_load_str})
+    node_dump = DumpNode(dump)({'a': node_task})
+    flow = Flow([node_dump, ])
+    flow.typecheck()
+    

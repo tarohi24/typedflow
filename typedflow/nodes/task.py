@@ -81,9 +81,3 @@ class TaskNode(ConsumerNode, ProviderNode[K], Callable):
     def __gt__(self,
                another: ConsumerNode) -> Callable[[str], None]:
         return self.gt_op(another=another)
-
-    def __call__(self, *args, **kwargs):
-        """
-        Behave as if this were a function
-        """
-        return self.func(*args, **kwargs)
