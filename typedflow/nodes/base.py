@@ -9,6 +9,7 @@ from typing import (
     Generic,
     List,
     Type,
+    TypeVar
 )
 from typedflow.batch import Batch
 from typedflow.counted_cache import CacheTable
@@ -17,6 +18,7 @@ from typedflow.types import K
 
 __all__ = ['ConsumerNode', 'ProviderNode']
 logger = logging.getLogger(__file__)
+T = TypeVar('T')
 
 
 @dataclass
@@ -99,6 +101,20 @@ class ConsumerNode:
 
     def __gt__(self, another):
         raise AssertionError('ConsumerNode does not support > operation')
+
+    def __call__(self: T,
+                 args: Dict[str, ProviderNode]) -> T:
+        """
+        This method is to define argument origins. This allows to declare both
+        function and its inputs at the same time.
+
+        Example:
+        >>> TaskNode(func)({'a': node_load, 'b': node_task_b})
+        None
+        """
+        assert len(self.precs) == 0, 'Some arguments have been already set'
+        self.precs: Dict[str, ProviderNode] = args
+        return self
 
 
 @dataclass
