@@ -29,6 +29,7 @@ class ConsumerNode:
     see: https://stackoverflow.com/questions/51575931/class-inheritance-in-python-3-7-dataclasses  # noqa
     """
     func: Callable[..., Any]
+    debug: bool = False
     precs: Dict[str, ProviderNode] = field(init=False)
 
     def __post_init__(self):
@@ -124,6 +125,7 @@ class ProviderNode(Generic[K]):
     LoaderNode or TaskNode
     """
     func: Callable[..., K]  # not a generator in order to get annotatinos
+    debug: bool = False
     cache_table: CacheTable[int, Batch[K]] = field(init=False)
     _succ_count: int = field(init=False)
 

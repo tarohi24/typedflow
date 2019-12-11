@@ -54,9 +54,12 @@ class TaskNode(ConsumerNode, ProviderNode[K], Callable):
             try:
                 products.append(self.func(**item))
             except Exception as e:
-                logger.warn(repr(e))
-                traceback.print_tb(e.__traceback__)
-                products.append(FaultItem())
+                if self.debug:
+                    raise e
+                else:
+                    logger.warn(repr(e))
+                    traceback.print_tb(e.__traceback__)
+                    products.append(FaultItem())
         return Batch[K](batch_id=batch.batch_id,
                         data=products)
 

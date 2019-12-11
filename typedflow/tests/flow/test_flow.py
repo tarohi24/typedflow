@@ -210,3 +210,36 @@ def test_declare_inputs_when_definition_with_multiple_args():
     flow = Flow([node_dump, ])
     flow.typecheck()
     assert node_task.cache_table.life == 1
+
+
+
+def test_debug_mode():
+    def load_str() -> Generator[str, None, None]:
+        yield 'a'
+        yield 'a'
+        yield 3
+
+    def task(a: str) -> List[int]:
+        return len(a)
+
+    def dump(a: Iterable[int]) -> None:
+        print(str(a))
+
+    node_load = LoaderNode(load_str)
+    node_task = TaskNode(task)({'a': node_load})
+    node_dump = DumpNode(dump)({'a': node_task})
+    flow = Flow([node_dump, ])
+    flow.typecheck()
+    flow.run()
+
+    def load_str() -> Generator[str, None, None]:
+        yield 'a'
+        yield 'a'
+        yield 3
+    node_load = LoaderNode(load_str)
+    node_task = TaskNode(task)({'a': node_load})
+    node_dump = DumpNode(dump)({'a': node_task})
+    flow = Flow([node_dump, ], debug=True)
+    flow.typecheck()
+    with pytest.raises(TypeError):
+        flow.run()

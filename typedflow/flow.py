@@ -15,14 +15,21 @@ Node = Union[ProviderNode, ConsumerNode]
 @dataclass
 class Flow:
     dump_nodes: List[DumpNode]
+    debug: bool = False
 
     def validate(self) -> None:
         """
         not implemented because Python Generic doesn't offer
         any ways to access to the actual type
         """
+        self.typecheck()
 
-    def get_loader_nodes(self) -> List[LoaderNode]:
+    def get_loader_nodes_with_broadcast(self) -> List[LoaderNode]:
+        """
+        Get load nodes. While node checking, all the debug status
+        is attachced to all nodes.
+        Therefore, this method should pass all the nodes in the DAG.
+        """
         loaders: List[LoaderNode] = []
         visited: List[Node] = []
         cands: Deque[Node] = Deque()
@@ -37,6 +44,7 @@ class Flow:
             else:
                 visited.append(node)
 
+            node.debug: bool = self.debug
             if isinstance(node, LoaderNode):
                 if node not in loaders:
                     loaders.append(node)
@@ -46,6 +54,9 @@ class Flow:
 
     def run(self,
             validate: bool = True) -> None:
+        """
+        Run flow.
+        """
         if validate:
             self.validate()
         batch_id: int = 0
@@ -122,5 +133,5 @@ class Flow:
                                     for name, ups_node in new_node.precs.items()}))
 
         # check batch_size
-        loaders: List[LoaderNode] = self.get_loader_nodes()
+        loaders: List[LoaderNode] = self.get_loader_nodes_with_broadcast()
         assert len({ld.batch_size for ld in loaders}) == 1
