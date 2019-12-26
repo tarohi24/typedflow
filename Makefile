@@ -1,9 +1,13 @@
 PREFIX=docker-compose run --rm app
 
 
-lint:
+lint: FORCE
 	${PREFIX} flake8
 
-
-test:
+test: FORCE
 	${PREFIX} pytest
+
+stub: FORCE
+	${PREFIX} stubgen typedflow -o stub
+
+FORCE:
