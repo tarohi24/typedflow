@@ -27,7 +27,11 @@ setup(
     include_package_data=True,
     keywords='typedflow',
     name='typedflow',
-    packages=find_packages(include=['typedflow', 'typedflow-stubs']),
+    # packages=find_packages(include=['typedflow', ]),
+    packages=['typedflow', ],
+    package_data={
+        'typedflow': ["py.typed"],
+    },
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
