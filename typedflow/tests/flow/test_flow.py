@@ -212,7 +212,6 @@ def test_declare_inputs_when_definition_with_multiple_args():
     assert node_task.cache_table.life == 1
 
 
-
 def test_debug_mode():
     def load_str() -> Generator[str, None, None]:
         yield 'a'
