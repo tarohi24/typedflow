@@ -27,8 +27,7 @@ setup(
     include_package_data=True,
     keywords='typedflow',
     name='typedflow',
-    # packages=find_packages(include=['typedflow', ]),
-    packages=['typedflow', ],
+    packages=find_packages(include=['typedflow', ]),
     package_data={
         'typedflow': ["py.typed"],
     },
