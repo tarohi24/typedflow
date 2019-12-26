@@ -8,6 +8,6 @@ test: FORCE
 	${PREFIX} pytest
 
 stub: FORCE
-	${PREFIX} stubgen typedflow -o stub
+	${PREFIX} stubgen typedflow -o typedflow-stubs
 
 FORCE:
