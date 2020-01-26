@@ -27,7 +27,7 @@ class DumpNode(ConsumerNode):
             try:
                 batch: Batch[Dict[str, Any]] = self.accept(batch_id=batch_id)
                 self.dump(batch)
-            gc.collect()
+                gc.collect()
             except EndOfBatch:
                 self.finished: bool = True
         else:
